@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Exan Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="page-shell">
+	<header class="topbar panel">
+		<div>
+			<p class="eyebrow">Exan</p>
+			<h1>Analytics Dashboard</h1>
+			<p class="subtitle">Upload, analyze, and explore transaction trends in one place.</p>
+			<p class="subtitle">Active window:
+				<strong>
+					{% if selected_window == "7" %}Last 7 days{% elif selected_window == "30" %}Last 30 days{% elif selected_window == "90" %}Last 90 days{% else %}All data{% endif %}
+				</strong>
+			</p>
+			<p class="subtitle">Active product: <strong>{{ selected_product if selected_product != "all" else "All products" }}</strong></p>
+			<p class="subtitle">Active company: <strong>{{ selected_company if selected_company != "all" else "All companies" }}</strong></p>
+		</div>
+		<div class="topbar-actions">
+			<a class="icon-link" href="/settings" title="Settings" aria-label="Admin Settings">&#9881;</a>
+			<a class="logout-link" href="/logout">Logout</a>
+		</div>
+	</header>
+
+	<main class="dashboard-grid">
+		<section class="controls-grid">
+			<article class="panel control-card">
+				<h2>Upload Spreadsheets</h2>
+				<p class="subtitle">Upload File A and File B to extract, compare, and visualize shared datasets.</p>
+				{% if upload_error %}
+				<p class="form-alert error">{{ upload_error }}</p>
+				{% endif %}
+				<p class="subtitle">File A status: <strong>{{ "Uploaded" if has_primary_upload else "Not uploaded" }}</strong></p>
+				{% if primary_filename %}
+				<p class="subtitle">File A name: <strong>{{ primary_filename }}</strong></p>
+				{% endif %}
+				<p class="subtitle">File B status: <strong>{{ "Uploaded" if has_secondary_upload else "Not uploaded" }}</strong></p>
+				{% if secondary_filename %}
+				<p class="subtitle">File B name: <strong>{{ secondary_filename }}</strong></p>
+				{% endif %}
+				<form method="POST" enctype="multipart/form-data" class="stack-form">
+					<input type="hidden" name="apply_filters" value="1">
+					<label for="date_window_upload">Date Window</label>
+					<select id="date_window_upload" name="date_window">
+						<option value="all" {% if selected_window == "all" %}selected{% endif %}>All data</option>
+						<option value="7" {% if selected_window == "7" %}selected{% endif %}>Last 7 days</option>
+						<option value="30" {% if selected_window == "30" %}selected{% endif %}>Last 30 days</option>
+						<option value="90" {% if selected_window == "90" %}selected{% endif %}>Last 90 days</option>
+					</select>
+
+					<label for="product_filter">Product</label>
+					<select id="product_filter" name="product_filter">
+						<option value="all" {% if selected_product == "all" %}selected{% endif %}>All products</option>
+						{% for product in product_options or [] %}
+						<option value="{{ product }}" {% if selected_product == product %}selected{% endif %}>{{ product }}</option>
+						{% endfor %}
+					</select>
+
+					<label for="company_filter">Company</label>
+					<select id="company_filter" name="company_filter">
+						<option value="all" {% if selected_company == "all" %}selected{% endif %}>All companies</option>
+						{% for company in company_options or [] %}
+						<option value="{{ company }}" {% if selected_company == company %}selected{% endif %}>{{ company }}</option>
+						{% endfor %}
+					</select>
+
+					<label>Comparison Metrics (shared columns)</label>
+					<div class="checkbox-grid">
+						{% for metric in available_compare_columns or [] %}
+						<label class="checkbox-item" for="metric_{{ metric }}">
+							<input
+								id="metric_{{ metric }}"
+								type="checkbox"
+								name="compare_columns"
+								value="{{ metric }}"
+								{% if metric in (selected_compare_columns or []) %}checked{% endif %}
+							>
+							<span>{{ metric }}</span>
+						</label>
+						{% endfor %}
+					</div>
+
+					<label for="compare_category">Comparison Category</label>
+					<select id="compare_category" name="compare_category">
+						{% for category_name in available_compare_categories or [] %}
+						<option value="{{ category_name }}" {% if selected_compare_category == category_name %}selected{% endif %}>{{ category_name }}</option>
+						{% endfor %}
+					</select>
+
+					<label for="file_primary">File A (base dataset)</label>
+					<input id="file_primary" type="file" name="file_primary" accept=".xls,.xlsx">
+
+					<label for="file_secondary">File B (comparison dataset)</label>
+					<input id="file_secondary" type="file" name="file_secondary" accept=".xls,.xlsx">
+
+					<button type="submit">Apply Filters, Analyze, and Compare</button>
+				</form>
+			</article>
+
+			{% if merchants %}
+			<article class="panel control-card">
+				<h2>Merchant Drilldown</h2>
+				<p class="subtitle">Select a merchant inside the current date range.</p>
+				<form method="POST" class="stack-form">
+					<input type="hidden" name="apply_filters" value="1">
+					<input type="hidden" name="date_window" value="{{ selected_window }}">
+					<input type="hidden" name="product_filter" value="{{ selected_product }}">
+					<input type="hidden" name="company_filter" value="{{ selected_company }}">
+					<input type="hidden" name="compare_category" value="{{ selected_compare_category }}">
+					{% for metric in selected_compare_columns or [] %}
+					<input type="hidden" name="compare_columns" value="{{ metric }}">
+					{% endfor %}
+					<select name="merchant">
+						{% for merchant in merchants %}
+						<option value="{{ merchant }}">{{ merchant }}</option>
+						{% endfor %}
+					</select>
+					<button type="submit">Analyze Merchant</button>
+				</form>
+			</article>
+			{% endif %}
+		</section>
+
+		{% if results %}
+		<section class="kpi-grid">
+			<article class="panel kpi-card">
+				<p class="kpi-label">Total Transactions</p>
+				<p class="kpi-value">{{ results.total_transactions }}</p>
+			</article>
+			<article class="panel kpi-card">
+				<p class="kpi-label">Total Debit</p>
+				<p class="kpi-value">{{ results.total_debit }}</p>
+			</article>
+			<article class="panel kpi-card">
+				<p class="kpi-label">Total Credit</p>
+				<p class="kpi-value">{{ results.total_credit }}</p>
+			</article>
+			{% if merchant_results %}
+			<article class="panel kpi-card">
+				<p class="kpi-label">Merchant Transactions</p>
+				<p class="kpi-value">{{ merchant_results.merchant_transactions }}</p>
+			</article>
+			{% endif %}
+		</section>
+
+		<section class="support-grid">
+			<article class="panel">
+				<h2>Top Products</h2>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>#</th>
+								<th>Product</th>
+								<th>Transactions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for product, count in results.top_products.items() %}
+							<tr>
+								<td>{{ loop.index }}</td>
+								<td>{{ product }}</td>
+								<td>{{ count }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</article>
+
+			{% if merchant_results %}
+			<article class="panel">
+				<h2>Merchant Summary</h2>
+				<ul class="summary-list">
+					<li><span>Total Debit</span><strong>{{ merchant_results.merchant_total_debit }}</strong></li>
+					<li><span>Total Credit</span><strong>{{ merchant_results.merchant_total_credit }}</strong></li>
+				</ul>
+			</article>
+			{% endif %}
+		</section>
+		{% endif %}
+
+		{% if charts %}
+		<section class="charts-grid">
+			<article class="panel chart-card">
+				<h3>Top Products (Bar)</h3>
+				<div class="chart-frame">{{ charts.product_chart|safe }}</div>
+			</article>
+
+			{% if charts.share_chart %}
+			<article class="panel chart-card">
+				<h3>Debit Share by Product (Pie)</h3>
+				<div class="chart-frame">{{ charts.share_chart|safe }}</div>
+			</article>
+			{% endif %}
+
+			<article class="panel chart-card">
+				<h3>Top Merchants by Debit</h3>
+				<div class="chart-frame">{{ charts.merchant_chart|safe }}</div>
+			</article>
+
+			<article class="panel chart-card">
+				<h3>Transaction Value Scale</h3>
+				<div class="chart-frame">{{ charts.revenue_chart|safe }}</div>
+			</article>
+
+			{% if charts.trend_chart %}
+			<article class="panel chart-card">
+				<h3>Trend Over Time</h3>
+				<div class="chart-frame">{{ charts.trend_chart|safe }}</div>
+			</article>
+			{% endif %}
+		</section>
+		{% endif %}
+
+		{% if comparison_results %}
+		<section class="kpi-grid compare-kpi-grid">
+			<article class="panel kpi-card compare-kpi">
+				<p class="kpi-label">File A Transactions</p>
+				<p class="kpi-value">{{ comparison_results.dataset_a_transactions|fmt_num }}</p>
+			</article>
+			<article class="panel kpi-card compare-kpi">
+				<p class="kpi-label">File B Transactions</p>
+				<p class="kpi-value">{{ comparison_results.dataset_b_transactions|fmt_num }}</p>
+			</article>
+			<article class="panel kpi-card compare-kpi">
+				<p class="kpi-label">Shared Products</p>
+				<p class="kpi-value">{{ comparison_results.shared_products_count|fmt_num }}</p>
+			</article>
+			<article class="panel kpi-card compare-kpi">
+				<p class="kpi-label">Shared Companies</p>
+				<p class="kpi-value">{{ comparison_results.shared_companies_count|fmt_num }}</p>
+			</article>
+		</section>
+
+		<section class="support-grid compare-support-grid">
+			<article class="panel">
+				<h2>Selected Column Comparison</h2>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>Column</th>
+								<th>File A Total</th>
+								<th>File B Total</th>
+								<th>Delta (B - A)</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for row in comparison_results.column_comparisons or [] %}
+							<tr>
+								<td>{{ row.column }}</td>
+								<td>{{ row.file_a_total|fmt_num }}</td>
+								<td>{{ row.file_b_total|fmt_num }}</td>
+								<td>{{ row.delta|fmt_num }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</article>
+
+			<article class="panel">
+				<h2>Shared Dataset Preview</h2>
+				<p class="subtitle">Category used: <strong>{{ comparison_results.selected_compare_category if comparison_results.selected_compare_category else 'Not selected' }}</strong></p>
+				<p class="subtitle">Columns used: <strong>{{ comparison_results.selected_compare_columns|join(', ') if comparison_results.selected_compare_columns else 'None selected' }}</strong></p>
+				<p class="subtitle">Products: {{ comparison_results.shared_products_preview|join(', ') if comparison_results.shared_products_preview else 'None found' }}</p>
+				<p class="subtitle">Companies: {{ comparison_results.shared_companies_preview|join(', ') if comparison_results.shared_companies_preview else 'None found' }}</p>
+			</article>
+		</section>
+
+		{% if comparison_charts %}
+		<section class="charts-grid">
+			{% if comparison_charts.compare_selected_columns_chart %}
+			<article class="panel chart-card">
+				<h3>Selected Columns: File A vs File B</h3>
+				<div class="chart-frame">{{ comparison_charts.compare_selected_columns_chart|safe }}</div>
+			</article>
+			{% endif %}
+
+			{% if comparison_charts.compare_selected_category_chart %}
+			<article class="panel chart-card">
+				<h3>Shared Category Comparison</h3>
+				<div class="chart-frame">{{ comparison_charts.compare_selected_category_chart|safe }}</div>
+			</article>
+			{% endif %}
+
+			{% if comparison_charts.compare_product_chart %}
+			<article class="panel chart-card">
+				<h3>Shared Products: Debit Comparison</h3>
+				<div class="chart-frame">{{ comparison_charts.compare_product_chart|safe }}</div>
+			</article>
+			{% endif %}
+
+			{% if comparison_charts.compare_company_chart %}
+			<article class="panel chart-card">
+				<h3>Shared Companies: Debit Comparison</h3>
+				<div class="chart-frame">{{ comparison_charts.compare_company_chart|safe }}</div>
+			</article>
+			{% endif %}
+
+			{% if comparison_charts.compare_trend_chart %}
+			<article class="panel chart-card">
+				<h3>Debit Trend Comparison</h3>
+				<div class="chart-frame">{{ comparison_charts.compare_trend_chart|safe }}</div>
+			</article>
+			{% endif %}
+		</section>
+		{% endif %}
+		{% endif %}
+	</main>
+</div>
+
+</body>
+</html>

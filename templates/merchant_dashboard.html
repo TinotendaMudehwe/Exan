@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Merchant Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="page-shell">
+	<header class="topbar panel">
+		<div>
+			<p class="eyebrow">Merchant View</p>
+			<h1>{{ stats.merchant }}</h1>
+			<p class="subtitle">Focused metrics for this merchant profile.</p>
+		</div>
+		<a class="logout-link" href="/">Back to Dashboard</a>
+	</header>
+
+	<section class="kpi-grid">
+		<article class="panel kpi-card">
+			<p class="kpi-label">Total Transactions</p>
+			<p class="kpi-value">{{ stats.transactions }}</p>
+		</article>
+		<article class="panel kpi-card">
+			<p class="kpi-label">Total Value</p>
+			<p class="kpi-value">{{ stats.total }}</p>
+		</article>
+		<article class="panel kpi-card">
+			<p class="kpi-label">Average Transaction</p>
+			<p class="kpi-value">{{ stats.average }}</p>
+		</article>
+		<article class="panel kpi-card">
+			<p class="kpi-label">Highest Transaction</p>
+			<p class="kpi-value">{{ stats.max }}</p>
+		</article>
+	</section>
+
+	<section class="support-grid">
+		<article class="panel chart-card">
+			<h3>Transaction Chart</h3>
+			<div class="chart-frame">{{ chart | safe }}</div>
+		</article>
+
+		<article class="panel">
+			<h2>Risk Indicator</h2>
+			<p class="kpi-value">{{ stats.risk }}</p>
+		</article>
+	</section>
+</div>
+
+</body>
+</html>

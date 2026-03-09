@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix excel-analyzer-ui start",
+    "build": "npm --prefix excel-analyzer-ui run build",
+    "test": "npm --prefix excel-analyzer-ui run test"
+  },
+  "dependencies": {
+    "framer-motion": "^12.35.0"
+  }
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Analytics Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="page-shell">
+	<header class="topbar panel">
+		<div>
+			<p class="eyebrow">Exan</p>
+			<h1>Analytics Dashboard</h1>
+			<p class="subtitle">A clean view of performance metrics and trends.</p>
+		</div>
+		<a class="logout-link" href="/logout">Logout</a>
+	</header>
+
+	<section class="kpi-grid">
+		<article class="panel kpi-card">
+			<p class="kpi-label">Total Transactions</p>
+			<p class="kpi-value">{{ results.total_transactions }}</p>
+		</article>
+		<article class="panel kpi-card">
+			<p class="kpi-label">Total Debit</p>
+			<p class="kpi-value">{{ results.total_debit }}</p>
+		</article>
+		<article class="panel kpi-card">
+			<p class="kpi-label">Total Credit</p>
+			<p class="kpi-value">{{ results.total_credit }}</p>
+		</article>
+	</section>
+
+	<section class="charts-grid">
+		<article class="panel chart-card">
+			<h3>Top Products (Bar)</h3>
+			<div class="chart-frame">{{ charts.product_chart | safe }}</div>
+		</article>
+
+		{% if charts.share_chart %}
+		<article class="panel chart-card">
+			<h3>Debit Share by Product (Pie)</h3>
+			<div class="chart-frame">{{ charts.share_chart | safe }}</div>
+		</article>
+		{% endif %}
+
+		<article class="panel chart-card">
+			<h3>Top Merchants by Debit</h3>
+			<div class="chart-frame">{{ charts.merchant_chart | safe }}</div>
+		</article>
+
+		<article class="panel chart-card">
+			<h3>Transaction Value Scale</h3>
+			<div class="chart-frame">{{ charts.revenue_chart | safe }}</div>
+		</article>
+
+		<article class="panel chart-card">
+			<h3>Trend Over Time</h3>
+			<div class="chart-frame">{{ charts.trend_chart | safe }}</div>
+		</article>
+	</section>
+</div>
+
+</body>
+</html>

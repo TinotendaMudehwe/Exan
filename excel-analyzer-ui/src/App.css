@@ -1,0 +1,273 @@
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 40px;
+  gap: 80px;
+  position: relative;
+}
+
+.falling-files {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.falling-file {
+  position: absolute;
+  top: -80px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 188, 212, 0.45);
+  background: rgba(10, 26, 40, 0.55);
+  color: #d8f7ff;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.file1 {
+  left: 12%;
+}
+
+.file2 {
+  left: 52%;
+}
+
+.file3 {
+  left: 86%;
+}
+
+.left-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.filter-image {
+  width: 85%;
+  max-width: 600px;
+  filter: drop-shadow(0 0 16px rgba(0, 255, 255, 0.24));
+}
+
+.gear {
+  position: absolute;
+  color: rgba(210, 248, 255, 0.72);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.28);
+  z-index: 2;
+}
+
+.gear-large {
+  top: 44%;
+  left: 45%;
+  font-size: 34px;
+}
+
+.gear-small {
+  top: 49%;
+  left: 52%;
+  font-size: 22px;
+}
+
+.excel-icon {
+  position: absolute;
+  font-size: 30px;
+  opacity: 0.84;
+  z-index: 3;
+}
+
+.chart-glow {
+  animation: glow-pulse 4.8s ease-in-out infinite;
+}
+
+.icon1 {
+  top: 10%;
+  left: 40%;
+}
+
+.icon2 {
+  top: 20%;
+  left: 60%;
+}
+
+.icon3 {
+  top: 5%;
+  left: 55%;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-card {
+  background: rgba(20, 40, 60, 0.9);
+  padding: 40px;
+  border-radius: 14px;
+  width: 380px;
+  box-shadow: 0 0 28px rgba(0, 255, 255, 0.26);
+  color: white;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.system-title {
+  margin-bottom: 15px;
+  font-size: 30px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin: 12px 0;
+  border: none;
+  border-radius: 6px;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.remember label {
+  font-size: 14px;
+}
+
+.remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.form-message {
+  margin: 12px 0 0;
+  font-size: 14px;
+  text-align: left;
+}
+
+.form-message.error {
+  color: #ff9d9d;
+}
+
+.form-message.success {
+  color: #baf8d0;
+}
+
+.login-card button {
+  margin-top: 20px;
+  width: 100%;
+  padding: 12px;
+  background: #00bcd4;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.login-card button:hover {
+  background: #0097a7;
+}
+
+.login-card button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+@keyframes glow-pulse {
+  0% {
+    text-shadow: 0 0 4px rgba(0, 255, 255, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.42);
+  }
+  100% {
+    text-shadow: 0 0 4px rgba(0, 255, 255, 0.2);
+  }
+}
+
+@media (max-width: 980px) {
+  .login-page {
+    flex-direction: column;
+    gap: 28px;
+    padding: 20px;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .filter-image {
+    width: 92%;
+    max-width: 420px;
+  }
+
+  .excel-icon {
+    font-size: 26px;
+  }
+
+  .gear-large {
+    top: 47%;
+    left: 44%;
+    font-size: 28px;
+  }
+
+  .gear-small {
+    top: 52%;
+    left: 52%;
+    font-size: 18px;
+  }
+
+  .falling-file {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .file1 {
+    left: 8%;
+  }
+
+  .file2 {
+    left: 48%;
+  }
+
+  .file3 {
+    left: 82%;
+  }
+
+  .icon1 {
+    top: 8%;
+    left: 35%;
+  }
+
+  .icon2 {
+    top: 15%;
+    left: 62%;
+  }
+
+  .icon3 {
+    top: 3%;
+    left: 52%;
+  }
+
+  .login-card {
+    width: min(380px, calc(100vw - 40px));
+    padding: 28px;
+  }
+}

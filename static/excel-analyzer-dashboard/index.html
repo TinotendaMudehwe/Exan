@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Excel Analyzer Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Excel Data Analysis System</h1>
+
+<div class="pipeline">
+
+<!-- Excel Input -->
+<div class="excel-input">
+    <img src="assets/excel.png" class="excel-icon">
+    <p>Upload Excel Files</p>
+    <input type="file" id="excelFile" accept=".xls,.xlsx">
+</div>
+
+<!-- Arrow -->
+<div class="arrow">⬇</div>
+
+<!-- Filter System -->
+<div class="filter">
+    <div class="filter-top">DATA FILTER</div>
+    <div class="filter-body">
+        <div class="gear">⚙</div>
+        <div class="gear">⚙</div>
+        <div class="gear">⚙</div>
+        <p>Analyzing Data...</p>
+    </div>
+</div>
+
+<!-- Arrow -->
+<div class="arrow">⬇</div>
+
+<!-- Output Charts -->
+<div class="output">
+    <img src="assets/charts.png" class="chart-icon">
+    <p>Charts & Insights</p>
+
+    <div class="charts">
+        <canvas id="barChart"></canvas>
+        <canvas id="pieChart"></canvas>
+    </div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>

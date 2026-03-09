@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Settings</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+<div class="page-shell">
+  <header class="topbar panel">
+    <div>
+      <p class="eyebrow">Admin</p>
+      <h1>Settings</h1>
+      <p class="subtitle">Update login credentials for the system.</p>
+    </div>
+    <a class="logout-link" href="/">Back to Dashboard</a>
+  </header>
+
+  <section class="panel settings-panel">
+    <h2>Account Configuration</h2>
+    <p class="subtitle">Current username: <strong>{{ current_username }}</strong></p>
+
+    {% if error %}
+    <p class="form-alert error">{{ error }}</p>
+    {% endif %}
+
+    {% if success %}
+    <p class="form-alert success">{{ success }}</p>
+    {% endif %}
+
+    <form method="POST" class="stack-form settings-form">
+      <label for="current_username">Current Username</label>
+      <input id="current_username" type="text" name="current_username" required>
+
+      <label for="current_password">Current Password</label>
+      <input id="current_password" type="password" name="current_password" required>
+
+      <label for="new_username">New Username</label>
+      <input id="new_username" type="text" name="new_username" required>
+
+      <label for="new_password">New Password</label>
+      <input id="new_password" type="password" name="new_password" required>
+
+      <label for="confirm_password">Confirm New Password</label>
+      <input id="confirm_password" type="password" name="confirm_password" required>
+
+      <button type="submit">Save Changes</button>
+    </form>
+  </section>
+</div>
+</body>
+</html>

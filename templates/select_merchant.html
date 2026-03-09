@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Select Merchant</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="page-shell">
+	<section class="panel" style="max-width: 540px;">
+		<p class="eyebrow">Merchant Tools</p>
+		<h2>Select Merchant</h2>
+		<p class="subtitle">Pick a merchant from your uploaded dataset to continue analysis.</p>
+
+		<form action="/merchant_analysis" method="POST" class="stack-form" style="margin-top: 18px;">
+			<select name="merchant">
+				{% for m in merchants %}
+				<option value="{{m}}">{{m}}</option>
+				{% endfor %}
+			</select>
+			<button type="submit">Analyze Merchant</button>
+		</form>
+	</section>
+</div>
+
+</body>
+</html>
