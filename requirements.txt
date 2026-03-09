@@ -3,3 +3,6 @@ flask-cors
 pandas
 plotly
 openpyxl
+xlrd
+pyxlsb
+gunicorn
