@@ -13,7 +13,18 @@
       <h1>Settings</h1>
       <p class="subtitle">Update login credentials for the system.</p>
     </div>
-    <a class="logout-link" href="/">Back to Dashboard</a>
+    <div class="topbar-actions">
+      <div class="theme-picker">
+        <label for="theme_selector_settings">Theme</label>
+        <select id="theme_selector_settings" class="theme-select">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="amber">Amber</option>
+          <option value="forest">Forest</option>
+        </select>
+      </div>
+      <a class="logout-link" href="/">Back to Dashboard</a>
+    </div>
   </header>
 
   <section class="panel settings-panel">
@@ -48,5 +59,6 @@
     </form>
   </section>
 </div>
+<script src="/static/theme.js"></script>
 </body>
 </html>

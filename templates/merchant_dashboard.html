@@ -7,6 +7,7 @@
 </head>
 
 <body>
+<script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
 <div class="page-shell">
 	<header class="topbar panel">
@@ -15,7 +16,18 @@
 			<h1>{{ stats.merchant }}</h1>
 			<p class="subtitle">Focused metrics for this merchant profile.</p>
 		</div>
-		<a class="logout-link" href="/">Back to Dashboard</a>
+		<div class="topbar-actions">
+			<div class="theme-picker">
+				<label for="theme_selector_merchant">Theme</label>
+				<select id="theme_selector_merchant" class="theme-select">
+					<option value="dark">Dark</option>
+					<option value="light">Light</option>
+					<option value="amber">Amber</option>
+					<option value="forest">Forest</option>
+				</select>
+			</div>
+			<a class="logout-link" href="/">Back to Dashboard</a>
+		</div>
 	</header>
 
 	<section class="kpi-grid">
@@ -50,5 +62,7 @@
 	</section>
 </div>
 
+<script src="/static/theme.js"></script>
+<script src="/static/dashboard.js"></script>
 </body>
 </html>

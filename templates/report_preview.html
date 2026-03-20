@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Exan Report Preview</title>
+<link rel="stylesheet" href="/static/style.css?v=20260317a">
+<script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+
+<body>
+	<div class="toast-tray" data-toast-tray></div>
+
+	<div class="report-preview-shell">
+		<header class="panel report-preview-topbar">
+			<div>
+				<p class="eyebrow">Exan</p>
+				<p class="subtitle">Preview the printable report before exporting or presenting it.</p>
+			</div>
+			<div class="report-preview-actions">
+				<div class="theme-picker">
+					<label for="theme_selector_report">Theme</label>
+					<select id="theme_selector_report" class="theme-select">
+						<option value="dark">Dark</option>
+						<option value="light">Light</option>
+						<option value="amber">Amber</option>
+						<option value="forest">Forest</option>
+					</select>
+				</div>
+				<a class="secondary-button secondary-link" href="/">Back To Dashboard</a>
+				<a class="secondary-button secondary-link" href="/export-detailed-report?format=pdf">Export PDF</a>
+				<button type="button" class="secondary-button" onclick="window.print()">Print Preview</button>
+			</div>
+		</header>
+
+		<section class="panel report-cover-panel">
+			<div class="report-cover-head">
+				<div>
+					<p class="section-eyebrow">Preview</p>
+					<h1>Detailed Analysis Report</h1>
+					<p class="subtitle">Generated {{ report_meta.generated_at }} | File A: {{ report_meta.primary_filename }} | File B: {{ report_meta.secondary_filename }}</p>
+				</div>
+			</div>
+			<ul class="summary-list report-meta-list">
+				<li><span>Date Window</span><strong>{{ report_meta.date_window }}</strong></li>
+				<li><span>Product Filter</span><strong>{{ report_meta.product_filter }}</strong></li>
+				<li><span>Company Filter</span><strong>{{ report_meta.company_filter }}</strong></li>
+			</ul>
+		</section>
+
+		<div class="report-preview-grid">
+			<div class="report-preview-main">
+				{% if results %}
+				<section class="panel">
+					<p class="section-eyebrow">Executive Summary</p>
+					<h2>Core Metrics</h2>
+					<div class="kpi-grid hierarchy-kpi-grid">
+						<article class="panel kpi-card hierarchy-kpi">
+							<p class="kpi-label">Transactions</p>
+							<p class="kpi-value">{{ results.total_transactions|fmt_num }}</p>
+						</article>
+						<article class="panel kpi-card hierarchy-kpi">
+							<p class="kpi-label">Total Debit</p>
+							<p class="kpi-value">{{ results.total_debit|fmt_num }}</p>
+						</article>
+						<article class="panel kpi-card hierarchy-kpi">
+							<p class="kpi-label">Total Credit</p>
+							<p class="kpi-value">{{ results.total_credit|fmt_num }}</p>
+						</article>
+						<article class="panel kpi-card hierarchy-kpi kpi-card-drift kpi-card-drift-{{ comparison_health.tone }}">
+							<p class="kpi-label">Comparison Scope</p>
+							<p class="kpi-value">{{ (comparison_results.selected_compare_items|length if comparison_results else 0)|fmt_num }}</p>
+							<p class="kpi-trend kpi-trend-{{ comparison_health.tone if comparison_health.tone in ['positive', 'negative'] else 'flat' }}">{{ comparison_health.label }}</p>
+						</article>
+					</div>
+				</section>
+				{% endif %}
+
+				{% if featured_chart %}
+				<section class="panel featured-chart-panel">
+					<p class="section-eyebrow">Lead Chart</p>
+					<h2>{{ featured_chart.title }}</h2>
+					<p class="subtitle">{{ featured_chart.subtitle }}</p>
+					<div class="chart-frame featured-chart-frame">{{ featured_chart.html | safe }}</div>
+				</section>
+				{% endif %}
+
+				{% for section in report_sections %}
+				<section class="panel">
+					<p class="section-eyebrow">Report Section</p>
+					<h2>{{ section.title }}</h2>
+					<ul class="report-section-list">
+						{% for row in section.rows %}
+						<li>{{ row }}</li>
+						{% endfor %}
+					</ul>
+				</section>
+				{% endfor %}
+			</div>
+
+			<div class="report-preview-side">
+				<section class="panel storytelling-panel">
+					<p class="section-eyebrow">Narrative</p>
+					<h2>Story Highlights</h2>
+					<div class="story-grid">
+						<article class="story-card">
+							<h3>{{ storytelling_insights.what_changed.title }}</h3>
+							<ul class="story-list">
+								{% for item in storytelling_insights.what_changed.bullets %}
+								<li>{{ item.text }}</li>
+								{% endfor %}
+							</ul>
+						</article>
+						<article class="story-card">
+							<h3>{{ storytelling_insights.top_drivers.title }}</h3>
+							<ul class="story-list">
+								{% for item in storytelling_insights.top_drivers.bullets %}
+								<li>{{ item.text }}</li>
+								{% endfor %}
+							</ul>
+						</article>
+						<article class="story-card">
+							<h3>{{ storytelling_insights.comparison_story.title }}</h3>
+							<ul class="story-list">
+								{% for item in storytelling_insights.comparison_story.bullets %}
+								<li>{{ item.text }}</li>
+								{% endfor %}
+							</ul>
+						</article>
+					</div>
+				</section>
+
+				<section class="panel signals-panel">
+					<p class="section-eyebrow">Signals</p>
+					<h2>Decision Cues</h2>
+					<div class="signals-grid">
+						{% for signal in insight_signals or [] %}
+						<div class="signal-card signal-{{ signal.level }}">
+							<p class="signal-level">{{ signal.level|upper }}</p>
+							<h3>{{ signal.title }}</h3>
+							<p>{{ signal.detail }}</p>
+						</div>
+						{% endfor %}
+					</div>
+				</section>
+
+				{% if comparison_delta_rows %}
+				<section class="panel">
+					<p class="section-eyebrow">Comparison</p>
+					<h2>Metric Variance</h2>
+					<div class="report-table">
+						<table class="block01-table comparison-metrics-table">
+							<thead>
+								<tr>
+									<th>Metric</th>
+									<th>File A</th>
+									<th>File B</th>
+									<th>Delta</th>
+									<th>Variance</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for row in comparison_delta_rows %}
+								<tr>
+									<td>{{ row.column }}</td>
+									<td>{{ row.file_a_total|fmt_num }}</td>
+									<td>{{ row.file_b_total|fmt_num }}</td>
+									<td class="comparison-delta comparison-delta-{{ row.tone }}">{{ row.delta|fmt_num }}</td>
+									<td><span class="comparison-badge comparison-badge-{{ row.tone }}">{{ row.status_label }} · {{ row.delta_pct_label }}</span></td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</section>
+				{% endif %}
+
+				{% if currency_rows %}
+				<section class="panel">
+					<p class="section-eyebrow">Currency</p>
+					<h2>Currency Breakdown</h2>
+					<div class="report-table">
+						<table class="block01-table">
+							<thead>
+								<tr>
+									<th>Currency</th>
+									<th>Transactions</th>
+									<th>Count</th>
+									<th>ValueNett</th>
+									<th>ValueDebit</th>
+									<th>ValueCredit</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for row in currency_rows %}
+								<tr>
+									<td>{{ row.Currency }}</td>
+									<td>{{ row.transactions|fmt_num }}</td>
+									<td>{{ row.total_count|fmt_num }}</td>
+									<td>{{ row.total_valuenett|fmt_num }}</td>
+									<td>{{ row.total_valuedebit|fmt_num }}</td>
+									<td>{{ row.total_valuecredit|fmt_num }}</td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</section>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+	<script src="/static/theme.js"></script>
+	<script src="/static/dashboard.js"></script>
+</body>
+</html>

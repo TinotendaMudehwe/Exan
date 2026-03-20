@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Exan Advanced Charts</title>
+<link rel="stylesheet" href="/static/style.css?v=20260317b">
+<script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+
+<body>
+<div class="page-shell">
+	<header class="topbar panel">
+		<div>
+			<p class="eyebrow">Exan</p>
+			<p class="subtitle">Advanced charts workspace</p>
+		</div>
+		<div class="topbar-actions">
+			<a class="inline-action-link" href="/">Back to Dashboard</a>
+			<div class="theme-picker">
+				<label for="theme_selector_advanced">Theme</label>
+				<select id="theme_selector_advanced" class="theme-select">
+					<option value="dark">Dark</option>
+					<option value="light">Light</option>
+					<option value="amber">Amber</option>
+					<option value="forest">Forest</option>
+				</select>
+			</div>
+			<a class="logout-link" href="/logout">Logout</a>
+		</div>
+	</header>
+
+	<main class="dashboard-grid">
+		<section class="panel">
+			<p class="section-eyebrow">Advanced Tab</p>
+			<h1>Charts</h1>
+			<p class="subtitle">All chart galleries live here so the main dashboard stays focused on analysis controls, signals, and tabular review.</p>
+			<ul class="summary-list report-meta-list">
+				<li><span>File A status</span><strong>{{ "Uploaded" if has_primary_upload else "Not uploaded" }}</strong></li>
+				<li><span>File B status</span><strong>{{ "Uploaded" if has_secondary_upload else "Not uploaded" }}</strong></li>
+				<li><span>File A name</span><strong>{{ primary_filename or "N/A" }}</strong></li>
+				<li><span>File B name</span><strong>{{ secondary_filename or "N/A" }}</strong></li>
+			</ul>
+		</section>
+
+		{% if featured_chart %}
+		<section id="featured-chart" class="panel featured-chart-panel">
+			<p class="section-eyebrow">Featured View</p>
+			<h2>{{ featured_chart.title }}</h2>
+			<p class="subtitle">{{ featured_chart.subtitle }}</p>
+			<div class="chart-frame featured-chart-frame">{{ featured_chart.html | safe }}</div>
+		</section>
+		{% else %}
+		<section class="panel">
+			<p class="section-eyebrow">Featured View</p>
+			<h2>No chart available yet</h2>
+			<p class="subtitle">Upload and analyze data from the dashboard first, then return to this Advanced > Charts page.</p>
+		</section>
+		{% endif %}
+
+		{% if chart_sections is defined and chart_sections.base %}
+		<section id="base-charts" class="panel charts-section-panel">
+			<p class="section-eyebrow">Base Dataset Views</p>
+			<h2>What patterns exist in the base dataset?</h2>
+			<p class="subtitle">Use these charts to understand volume, concentration, and trend in the filtered base file.</p>
+			<div class="chart-gallery-toolbar" data-chart-controls>
+				<input type="search" placeholder="Search chart titles" data-chart-search aria-label="Search base charts">
+				<select data-chart-sort aria-label="Sort base charts">
+					<option value="default">Story order</option>
+					<option value="az">Title A-Z</option>
+					<option value="za">Title Z-A</option>
+				</select>
+				<select data-chart-limit aria-label="Visible base charts">
+					<option value="2" selected>Top 2 cards</option>
+					<option value="3">Top 3 cards</option>
+					<option value="4">Top 4 cards</option>
+					<option value="all">Show all</option>
+				</select>
+				<label class="checkbox-item compact-toggle">
+					<input type="checkbox" data-chart-compact>
+					<span>Compact cards</span>
+				</label>
+			</div>
+			<div class="charts-grid narrative-charts-grid" data-chart-gallery>
+				{% for chart_card in chart_sections.base %}
+				<article class="panel chart-card narrative-chart-card" data-chart-card data-chart-key="{{ chart_card.key }}" data-chart-title="{{ chart_card.title|lower }}" data-chart-order="{{ loop.index }}">
+					<h3>{{ chart_card.title }}</h3>
+					<p class="subtitle chart-subtitle">{{ chart_card.subtitle }}</p>
+					<div class="chart-frame" data-chart-frame>Chart will load when visible.</div>
+				</article>
+				{% endfor %}
+			</div>
+			{% if chart_sections.base|length > 2 %}
+			<div class="chart-gallery-toolbar">
+				<button type="button" data-chart-show-more>Show more charts</button>
+			</div>
+			{% endif %}
+		</section>
+		{% endif %}
+
+		{% if chart_sections is defined and chart_sections.comparison %}
+		<section id="comparison-charts" class="panel charts-section-panel comparison-charts-panel">
+			<p class="section-eyebrow">Comparison Views</p>
+			<h2>How does the comparison dataset change the story?</h2>
+			<p class="subtitle">These charts show where File A and File B align, diverge, and concentrate difference.</p>
+			<div class="chart-gallery-toolbar" data-chart-controls>
+				<input type="search" placeholder="Search chart titles" data-chart-search aria-label="Search comparison charts">
+				<select data-chart-sort aria-label="Sort comparison charts">
+					<option value="default">Story order</option>
+					<option value="az">Title A-Z</option>
+					<option value="za">Title Z-A</option>
+				</select>
+				<select data-chart-limit aria-label="Visible comparison charts">
+					<option value="2" selected>Top 2 cards</option>
+					<option value="3">Top 3 cards</option>
+					<option value="4">Top 4 cards</option>
+					<option value="all">Show all</option>
+				</select>
+				<label class="checkbox-item compact-toggle">
+					<input type="checkbox" data-chart-compact>
+					<span>Compact cards</span>
+				</label>
+			</div>
+			<div class="charts-grid narrative-charts-grid" data-chart-gallery>
+				{% for chart_card in chart_sections.comparison %}
+				<article class="panel chart-card narrative-chart-card" data-chart-card data-chart-key="{{ chart_card.key }}" data-chart-title="{{ chart_card.title|lower }}" data-chart-order="{{ loop.index }}">
+					<h3>{{ chart_card.title }}</h3>
+					<p class="subtitle chart-subtitle">{{ chart_card.subtitle }}</p>
+					<div class="chart-frame" data-chart-frame>Chart will load when visible.</div>
+				</article>
+				{% endfor %}
+			</div>
+			{% if chart_sections.comparison|length > 2 %}
+			<div class="chart-gallery-toolbar">
+				<button type="button" data-chart-show-more>Show more charts</button>
+			</div>
+			{% endif %}
+		</section>
+		{% endif %}
+
+		{% if not featured_chart and (chart_sections is not defined or (not chart_sections.base and not chart_sections.comparison)) %}
+		<section class="panel">
+			<p class="section-eyebrow">Chart Library</p>
+			<h2>No charts generated yet</h2>
+			<p class="subtitle">Upload and analyze a base file first. Add File B if you want comparison charts to appear here as well.</p>
+		</section>
+		{% endif %}
+	</main>
+</div>
+
+<script src="/static/theme.js"></script>
+<script src="/static/dashboard.js"></script>
+</body>
+</html>

@@ -1,13 +1,196 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import html
+import re
+
+
+BASE_COLOR = "#3cc6ff"
+COMPARE_COLOR = "#2dd37f"
+DELTA_COLOR = "#ffb347"
+ALERT_COLOR = "#ff7b7b"
+GRID_COLOR = "rgba(190,210,255,0.14)"
+ALLOWED_CURRENCY_CODES = {"USD", "ZWG", "ZIG", "ZWL"}
+
+
+def _chart_html(fig):
+    payload = fig.to_json()
+    escaped_payload = html.escape(payload, quote=True)
+    return (
+        f'<div class="plotly-lazy" data-plotly="{escaped_payload}">'
+        '<div class="plotly-lazy-placeholder">Loading chart...</div>'
+        '</div>'
+    )
+
+
+def _canonicalize_columns(df):
+    alias_map = {
+        "dateofweek": "DateOfWeek",
+        "dateof week": "DateOfWeek",
+        "date of week": "DateOfWeek",
+        "date": "DateOfWeek",
+        "product": "Product",
+        "companyname": "CompanyName",
+        "company name": "CompanyName",
+        "company": "CompanyName",
+        "merchant": "CompanyName",
+        "merchant name": "CompanyName",
+        "currency": "Currency",
+        "ccy": "Currency",
+        "count": "Count",
+        "valuenett": "ValueNett",
+        "value nett": "ValueNett",
+        "nett": "ValueNett",
+        "valuedebit": "ValueDebit",
+        "value debit": "ValueDebit",
+        "valuecredit": "ValueCredit",
+        "value credit": "ValueCredit",
+    }
+
+    rename_map = {}
+    for column in df.columns:
+        normalized = re.sub(r"\s+", " ", str(column).strip().lower())
+        normalized = normalized.replace("_", " ")
+        compact = normalized.replace(" ", "")
+        canonical = alias_map.get(normalized) or alias_map.get(compact)
+        if canonical and canonical not in df.columns:
+            rename_map[column] = canonical
+
+    if rename_map:
+        df = df.rename(columns=rename_map)
+
+    return df
+
+
+def _parse_numeric_value(value):
+    if pd.isna(value):
+        return float("nan")
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip()
+    if not text or text.lower() in {"nan", "none", "null", "-"}:
+        return float("nan")
+
+    negative = text.startswith("(") and text.endswith(")")
+    cleaned = text.replace("(", "").replace(")", "")
+    cleaned = cleaned.replace(",", "").replace(" ", "")
+    cleaned = cleaned.replace("$", "")
+    cleaned = re.sub(r"[^0-9.\-]", "", cleaned)
+
+    if cleaned in {"", "-", ".", "-."}:
+        return float("nan")
+
+    try:
+        numeric = float(cleaned)
+    except ValueError:
+        return float("nan")
+
+    return -numeric if negative and numeric > 0 else numeric
+
+
+def _extract_currency_token(value):
+    if pd.isna(value):
+        return None
+
+    text = str(value).strip().upper()
+    if not text:
+        return None
+
+    if text in ALLOWED_CURRENCY_CODES:
+        return text
+
+    for code in ALLOWED_CURRENCY_CODES:
+        if re.search(rf"\b{code}\b", text):
+            return code
+
+    return None
+
+
+def _is_numeric_like(value):
+    return pd.notna(_parse_numeric_value(value))
+
+
+def _auto_correct_row_misalignment(df):
+    required_cols = ["Currency", "Count", "ValueNett", "ValueDebit", "ValueCredit"]
+    if any(col not in df.columns for col in required_cols):
+        return df
+
+    corrected_df = df.copy()
+    for col in required_cols:
+        corrected_df[col] = corrected_df[col].astype(object)
+    correction_count = 0
+
+    for idx in corrected_df.index:
+        currency_value = corrected_df.at[idx, "Currency"]
+        count_value = corrected_df.at[idx, "Count"]
+        nett_value = corrected_df.at[idx, "ValueNett"]
+        debit_value = corrected_df.at[idx, "ValueDebit"]
+        credit_value = corrected_df.at[idx, "ValueCredit"]
+
+        count_currency = _extract_currency_token(count_value)
+        currency_currency = _extract_currency_token(currency_value)
+
+        if count_currency and not currency_currency:
+            if _is_numeric_like(currency_value):
+                # Pattern: currency and count values swapped (e.g., Currency=10, Count=USD)
+                corrected_df.at[idx, "Currency"] = count_currency
+                corrected_df.at[idx, "Count"] = currency_value
+                correction_count += 1
+            else:
+                # Pattern: one-cell shift to the right starting at Currency
+                corrected_df.at[idx, "Currency"] = count_currency
+                corrected_df.at[idx, "Count"] = nett_value
+                corrected_df.at[idx, "ValueNett"] = debit_value
+                corrected_df.at[idx, "ValueDebit"] = credit_value
+                corrected_df.at[idx, "ValueCredit"] = float("nan")
+                correction_count += 1
+
+    corrected_df.attrs["auto_corrections_applied"] = correction_count
+    return corrected_df
+
+
+def _normalize_and_correct_dataframe(df):
+    working_df = _canonicalize_columns(df)
+
+    # Ensure required columns exist so downstream analysis remains stable.
+    required_defaults = {
+        "DateOfWeek": pd.NaT,
+        "Product": "",
+        "CompanyName": "",
+        "Currency": "",
+        "Count": 0,
+        "ValueNett": 0,
+        "ValueDebit": 0,
+        "ValueCredit": 0,
+    }
+    for column_name, default_value in required_defaults.items():
+        if column_name not in working_df.columns:
+            working_df[column_name] = default_value
+
+    working_df = _auto_correct_row_misalignment(working_df)
+
+    for numeric_column in ["Count", "ValueNett", "ValueDebit", "ValueCredit"]:
+        working_df[numeric_column] = working_df[numeric_column].apply(_parse_numeric_value)
+
+    if "Currency" in working_df.columns:
+        working_df["Currency"] = (
+            working_df["Currency"]
+            .apply(lambda value: _extract_currency_token(value) or "")
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
+
+    return working_df
 
 
 def read_tabular_file(filepath):
     lower_path = str(filepath).lower()
 
     if lower_path.endswith(".csv"):
-        return pd.read_csv(filepath)
+        return _normalize_and_correct_dataframe(pd.read_csv(filepath))
 
     engine_candidates = []
     if lower_path.endswith(".xlsx") or lower_path.endswith(".xlsm"):
@@ -23,12 +206,12 @@ def read_tabular_file(filepath):
     last_error = None
     for engine in engine_candidates:
         try:
-            return pd.read_excel(filepath, engine=engine)
+            return _normalize_and_correct_dataframe(pd.read_excel(filepath, engine=engine))
         except Exception as exc:
             last_error = exc
 
     try:
-        return pd.read_excel(filepath)
+        return _normalize_and_correct_dataframe(pd.read_excel(filepath))
     except Exception as exc:
         if last_error is None:
             last_error = exc
@@ -79,6 +262,7 @@ def _apply_dimension_filters(df, product_filter, company_filter):
 
 def analyze_data(filepath, days_window="all", product_filter="all", company_filter="all"):
     df = read_tabular_file(filepath)
+    correction_count = int(df.attrs.get("auto_corrections_applied", 0) or 0)
 
     # Clean numeric columns
     df["ValueDebit"] = pd.to_numeric(df["ValueDebit"], errors="coerce")
@@ -86,6 +270,7 @@ def analyze_data(filepath, days_window="all", product_filter="all", company_filt
 
     filtered_df = _apply_date_window(df, days_window)
     filtered_df = _apply_dimension_filters(filtered_df, product_filter, company_filter)
+    filtered_df.attrs["auto_corrections_applied"] = correction_count
 
     results = {
         "total_transactions": len(filtered_df),
@@ -102,6 +287,7 @@ def analyze_data(filepath, days_window="all", product_filter="all", company_filt
 
 def _prepare_comparison_dataset(filepath, days_window="all", product_filter="all", company_filter="all"):
     df = read_tabular_file(filepath)
+    correction_count = int(df.attrs.get("auto_corrections_applied", 0) or 0)
 
     if "ValueDebit" in df.columns:
         df["ValueDebit"] = pd.to_numeric(df["ValueDebit"], errors="coerce")
@@ -115,8 +301,51 @@ def _prepare_comparison_dataset(filepath, days_window="all", product_filter="all
 
     filtered_df = _apply_date_window(df, days_window)
     filtered_df = _apply_dimension_filters(filtered_df, product_filter, company_filter)
+    filtered_df.attrs["auto_corrections_applied"] = correction_count
 
     return filtered_df
+
+
+def split_comparison_items(df_a, df_b, compare_category):
+    if not compare_category:
+        return [], []
+
+    categories_a = set(df_a[compare_category].dropna().astype(str).unique()) if compare_category in df_a.columns else set()
+    categories_b = set(df_b[compare_category].dropna().astype(str).unique()) if compare_category in df_b.columns else set()
+
+    # all_in_comparison: everything present in File B for current category
+    all_in_comparison = sorted(categories_b)
+    # shared_in_both: values present in both File A and File B
+    shared_in_both = sorted(categories_a.intersection(categories_b))
+
+    return all_in_comparison, shared_in_both
+
+
+def get_comparison_item_sets(
+    filepath_a,
+    filepath_b,
+    days_window="all",
+    product_filter="all",
+    company_filter="all",
+    compare_category="Product"
+):
+    df_a = _prepare_comparison_dataset(filepath_a, days_window, product_filter, company_filter)
+    df_b = _prepare_comparison_dataset(filepath_b, days_window, product_filter, company_filter)
+
+    common_columns = sorted(set(df_a.columns).intersection(set(df_b.columns)))
+    valid_category = compare_category if compare_category in common_columns else ""
+    if not valid_category:
+        valid_category = "Product" if "Product" in common_columns else "CompanyName" if "CompanyName" in common_columns else ""
+
+    all_in_comparison, shared_in_both = split_comparison_items(df_a, df_b, valid_category)
+    shared_lookup = set(shared_in_both)
+    unique_in_comparison = [item for item in all_in_comparison if item not in shared_lookup]
+    return {
+        "compare_category": valid_category,
+        "all_in_comparison": all_in_comparison,
+        "shared_in_both": shared_in_both,
+        "unique_in_comparison": unique_in_comparison
+    }
 
 
 def analyze_dataset_comparison(
@@ -126,7 +355,8 @@ def analyze_dataset_comparison(
     product_filter="all",
     company_filter="all",
     compare_columns=None,
-    compare_category="Product"
+    compare_category="Product",
+    compare_items=None
 ):
     df_a = _prepare_comparison_dataset(filepath_a, days_window, product_filter, company_filter)
     df_b = _prepare_comparison_dataset(filepath_b, days_window, product_filter, company_filter)
@@ -163,6 +393,14 @@ def analyze_dataset_comparison(
     if not valid_category:
         valid_category = "Product" if "Product" in common_columns else "CompanyName" if "CompanyName" in common_columns else ""
 
+    all_in_comparison, shared_in_both = split_comparison_items(df_a, df_b, valid_category)
+    shared_lookup = set(shared_in_both)
+    unique_in_comparison = [item for item in all_in_comparison if item not in shared_lookup]
+    requested_items = [str(item) for item in (compare_items or [])]
+    selected_compare_items = [item for item in requested_items if item in all_in_comparison]
+    if not selected_compare_items:
+        selected_compare_items = shared_in_both[:]
+
     column_comparisons = []
     for column_name in selected_columns:
         value_a = pd.to_numeric(df_a[column_name], errors="coerce").fillna(0).sum()
@@ -179,11 +417,20 @@ def analyze_dataset_comparison(
         "dataset_b_transactions": len(df_b),
         "selected_compare_columns": selected_columns,
         "selected_compare_category": valid_category,
+        "selected_compare_items": selected_compare_items,
+        "all_in_comparison_count": len(all_in_comparison),
+        "all_in_comparison_preview": all_in_comparison[:20],
+        "shared_in_both_count": len(shared_in_both),
+        "shared_in_both_preview": shared_in_both[:20],
+        "unique_in_comparison_count": len(unique_in_comparison),
+        "unique_in_comparison_preview": unique_in_comparison[:20],
         "column_comparisons": column_comparisons,
         "shared_products_count": len(shared_products),
         "shared_companies_count": len(shared_companies),
         "shared_products_preview": shared_products[:10],
-        "shared_companies_preview": shared_companies[:10]
+        "shared_companies_preview": shared_companies[:10],
+        "auto_corrections_file_a": int(df_a.attrs.get("auto_corrections_applied", 0) or 0),
+        "auto_corrections_file_b": int(df_b.attrs.get("auto_corrections_applied", 0) or 0),
     }
 
     comparison_charts = generate_comparison_charts(
@@ -192,7 +439,8 @@ def analyze_dataset_comparison(
         shared_products,
         shared_companies,
         selected_columns,
-        valid_category
+        valid_category,
+        selected_compare_items
     )
 
     return comparison_results, comparison_charts
@@ -226,8 +474,8 @@ def generate_charts(df):
             margin={"l": 40, "r": 20, "t": 52, "b": 40},
             legend={"orientation": "h", "y": -0.2}
         )
-        fig.update_xaxes(showgrid=True, gridcolor="rgba(190,210,255,0.14)")
-        fig.update_yaxes(showgrid=True, gridcolor="rgba(190,210,255,0.14)")
+        fig.update_xaxes(showgrid=True, gridcolor=GRID_COLOR)
+        fig.update_yaxes(showgrid=True, gridcolor=GRID_COLOR)
 
     # Product popularity chart
     product_counts = df["Product"].value_counts().reset_index()
@@ -237,13 +485,18 @@ def generate_charts(df):
         product_counts.head(10),
         x="Product",
         y="Count",
-        color="Count",
-        color_continuous_scale="Teal"
+        color_discrete_sequence=[BASE_COLOR]
     )
     apply_clean_layout(fig1, "Top Products (Bar)")
-    fig1.update_layout(coloraxis_showscale=False)
+    fig1.add_hline(
+        y=product_counts.head(10)["Count"].mean() if not product_counts.head(10).empty else 0,
+        line_dash="dot",
+        line_color=DELTA_COLOR,
+        annotation_text="Average",
+        annotation_position="top left"
+    )
 
-    charts["product_chart"] = fig1.to_html(full_html=False)
+    charts["product_chart"] = _chart_html(fig1)
 
 
     # Product share pie (specific category composition)
@@ -268,11 +521,11 @@ def generate_charts(df):
         names="Product",
         values="ValueDebit",
         hole=0.45,
-        color_discrete_sequence=px.colors.qualitative.Set3
+        color_discrete_sequence=[BASE_COLOR, COMPARE_COLOR, DELTA_COLOR, ALERT_COLOR, "#9bdbff", "#90f0bd", "#ffd88b"]
     )
     apply_clean_layout(fig_share, "Debit Share by Product (Pie)")
     fig_share.update_traces(textposition="inside", textinfo="percent+label")
-    charts["share_chart"] = fig_share.to_html(full_html=False)
+    charts["share_chart"] = _chart_html(fig_share)
 
 
     # Merchant comparison
@@ -289,14 +542,12 @@ def generate_charts(df):
         x="ValueDebit",
         y="CompanyName",
         orientation="h",
-        color="ValueDebit",
-        color_continuous_scale="Blues"
+        color_discrete_sequence=[BASE_COLOR]
     )
     apply_clean_layout(fig2, "Top Merchants by Debit (Scale)")
-    fig2.update_layout(coloraxis_showscale=False)
     fig2.update_yaxes(categoryorder="total ascending")
 
-    charts["merchant_chart"] = fig2.to_html(full_html=False)
+    charts["merchant_chart"] = _chart_html(fig2)
 
 
     # Transaction scale buckets (specific value bands)
@@ -324,13 +575,11 @@ def generate_charts(df):
         scale_counts,
         x="Scale",
         y="Count",
-        color="Count",
-        color_continuous_scale="Emrld"
+        color_discrete_sequence=[BASE_COLOR]
     )
     apply_clean_layout(fig3, "Transaction Value Scale (Bar)")
-    fig3.update_layout(coloraxis_showscale=False)
 
-    charts["revenue_chart"] = fig3.to_html(full_html=False)
+    charts["revenue_chart"] = _chart_html(fig3)
 
 
     # Transaction trend
@@ -357,8 +606,17 @@ def generate_charts(df):
             markers=True
         )
         apply_clean_layout(fig4, "Debit Trend Over Time")
+        if not trend.empty:
+            fig4.add_hline(
+                y=trend["ValueDebit"].mean(),
+                line_dash="dot",
+                line_color=DELTA_COLOR,
+                annotation_text="Average",
+                annotation_position="top left"
+            )
+        fig4.update_traces(line={"color": BASE_COLOR})
 
-        charts["trend_chart"] = fig4.to_html(full_html=False)
+        charts["trend_chart"] = _chart_html(fig4)
 
     return charts
 
@@ -369,7 +627,8 @@ def generate_comparison_charts(
     shared_products,
     shared_companies,
     selected_columns,
-    compare_category
+    compare_category,
+    selected_compare_items=None
 ):
     charts = {}
     chart_font = "Aptos, Segoe UI, Calibri, Helvetica, Arial, sans-serif"
@@ -383,8 +642,8 @@ def generate_comparison_charts(
             margin={"l": 40, "r": 20, "t": 52, "b": 40},
             legend={"orientation": "h", "y": -0.2}
         )
-        fig.update_xaxes(showgrid=True, gridcolor="rgba(190,210,255,0.14)")
-        fig.update_yaxes(showgrid=True, gridcolor="rgba(190,210,255,0.14)")
+        fig.update_xaxes(showgrid=True, gridcolor=GRID_COLOR)
+        fig.update_yaxes(showgrid=True, gridcolor=GRID_COLOR)
 
     if selected_columns:
         metric_rows = []
@@ -407,10 +666,18 @@ def generate_comparison_charts(
             y="Value",
             color="Dataset",
             barmode="group",
-            color_discrete_sequence=["#3cc6ff", "#2dd37f"]
+            color_discrete_sequence=[BASE_COLOR, COMPARE_COLOR]
         )
         apply_clean_layout(fig_metric_totals, "Selected Columns: File A vs File B")
-        charts["compare_selected_columns_chart"] = fig_metric_totals.to_html(full_html=False)
+        if not metrics_df.empty:
+            fig_metric_totals.add_hline(
+                y=metrics_df["Value"].mean(),
+                line_dash="dot",
+                line_color=DELTA_COLOR,
+                annotation_text="Average",
+                annotation_position="top left"
+            )
+        charts["compare_selected_columns_chart"] = _chart_html(fig_metric_totals)
 
     if (
         compare_category
@@ -421,9 +688,11 @@ def generate_comparison_charts(
         categories_a = set(df_a[compare_category].dropna().astype(str).unique())
         categories_b = set(df_b[compare_category].dropna().astype(str).unique())
         shared_categories = sorted(categories_a.intersection(categories_b))
+        scoped_categories = [item for item in (selected_compare_items or []) if item in categories_b]
+        categories_for_chart = scoped_categories if scoped_categories else shared_categories
 
         category_rows = []
-        for category_value in shared_categories[:10]:
+        for category_value in categories_for_chart[:10]:
             for metric in selected_columns:
                 metric_a = pd.to_numeric(
                     df_a[df_a[compare_category].astype(str) == category_value][metric],
@@ -456,10 +725,10 @@ def generate_comparison_charts(
                 color="Dataset",
                 barmode="group",
                 facet_row="Metric",
-                color_discrete_sequence=["#3cc6ff", "#2dd37f"]
+                color_discrete_sequence=[BASE_COLOR, COMPARE_COLOR]
             )
             apply_clean_layout(fig_category, f"Shared {compare_category}: Metric Comparison")
-            charts["compare_selected_category_chart"] = fig_category.to_html(full_html=False)
+            charts["compare_selected_category_chart"] = _chart_html(fig_category)
 
     if shared_products and "Product" in df_a.columns and "Product" in df_b.columns:
         compare_products = []
@@ -476,10 +745,10 @@ def generate_comparison_charts(
             y="ValueDebit",
             color="Dataset",
             barmode="group",
-            color_discrete_sequence=["#3cc6ff", "#2dd37f"]
+            color_discrete_sequence=[BASE_COLOR, COMPARE_COLOR]
         )
         apply_clean_layout(fig_products, "Shared Products: Debit Comparison")
-        charts["compare_product_chart"] = fig_products.to_html(full_html=False)
+        charts["compare_product_chart"] = _chart_html(fig_products)
 
     if shared_companies and "CompanyName" in df_a.columns and "CompanyName" in df_b.columns:
         compare_companies = []
@@ -497,11 +766,11 @@ def generate_comparison_charts(
             color="Dataset",
             orientation="h",
             barmode="group",
-            color_discrete_sequence=["#3cc6ff", "#2dd37f"]
+            color_discrete_sequence=[BASE_COLOR, COMPARE_COLOR]
         )
         apply_clean_layout(fig_companies, "Shared Companies: Debit Comparison")
         fig_companies.update_yaxes(categoryorder="total ascending")
-        charts["compare_company_chart"] = fig_companies.to_html(full_html=False)
+        charts["compare_company_chart"] = _chart_html(fig_companies)
 
     if "DateOfWeek" in df_a.columns and "DateOfWeek" in df_b.columns:
         trend_a = df_a.copy()
@@ -531,7 +800,7 @@ def generate_comparison_charts(
                     y=trend_compare_df["File A"],
                     mode="lines+markers",
                     name="File A",
-                    line={"color": "#3cc6ff"}
+                    line={"color": BASE_COLOR}
                 )
             )
             fig_trend.add_trace(
@@ -540,10 +809,19 @@ def generate_comparison_charts(
                     y=trend_compare_df["File B"],
                     mode="lines+markers",
                     name="File B",
-                    line={"color": "#2dd37f"}
+                    line={"color": COMPARE_COLOR}
                 )
             )
             apply_clean_layout(fig_trend, "Debit Trend Comparison")
-            charts["compare_trend_chart"] = fig_trend.to_html(full_html=False)
+            if not trend_compare_df.empty:
+                combined_average = (trend_compare_df["File A"].mean() + trend_compare_df["File B"].mean()) / 2
+                fig_trend.add_hline(
+                    y=combined_average,
+                    line_dash="dot",
+                    line_color=DELTA_COLOR,
+                    annotation_text="Average",
+                    annotation_position="top left"
+                )
+            charts["compare_trend_chart"] = _chart_html(fig_trend)
 
     return charts

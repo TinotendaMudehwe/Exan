@@ -10,6 +10,15 @@
 
 <div class="page-shell">
 	<section class="panel" style="max-width: 540px;">
+		<div class="theme-picker" style="justify-content:flex-end; margin-bottom: 10px;">
+			<label for="theme_selector_select_merchant">Theme</label>
+			<select id="theme_selector_select_merchant" class="theme-select">
+				<option value="dark">Dark</option>
+				<option value="light">Light</option>
+				<option value="amber">Amber</option>
+				<option value="forest">Forest</option>
+			</select>
+		</div>
 		<p class="eyebrow">Merchant Tools</p>
 		<h2>Select Merchant</h2>
 		<p class="subtitle">Pick a merchant from your uploaded dataset to continue analysis.</p>
@@ -25,5 +34,6 @@
 	</section>
 </div>
 
+<script src="/static/theme.js"></script>
 </body>
 </html>

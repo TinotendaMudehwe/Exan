@@ -1,0 +1,11 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+node_modules
+excel-analyzer-ui/node_modules
+excel-analyzer-ui/build
+uploads

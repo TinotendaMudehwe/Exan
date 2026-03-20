@@ -3,9 +3,30 @@
 
 <head>
 <title>Upload Spreadsheet</title>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
+
+<div class="page-shell">
+<header class="topbar panel">
+	<div>
+		<p class="eyebrow">Exan</p>
+	</div>
+	<div class="topbar-actions">
+		<div class="theme-picker">
+			<label for="theme_selector_upload">Theme</label>
+			<select id="theme_selector_upload" class="theme-select">
+				<option value="dark">Dark</option>
+				<option value="light">Light</option>
+				<option value="amber">Amber</option>
+				<option value="forest">Forest</option>
+			</select>
+		</div>
+	</div>
+</header>
+
+<section class="panel" style="max-width: 600px;">
 
 <h2>Upload Spreadsheet</h2>
 
@@ -16,6 +37,11 @@
 <button type="submit">Upload</button>
 
 </form>
+
+</section>
+</div>
+
+<script src="/static/theme.js"></script>
 
 </body>
 </html>

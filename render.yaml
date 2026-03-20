@@ -1,14 +1,26 @@
 services:
   - type: web
     name: exan-dashboard
-    env: python
+    env: docker
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
+      - key: APP_ENV
+        value: production
       - key: APP_USERNAME
         value: admin
       - key: APP_PASSWORD
         value: admin123
+      - key: SESSION_COOKIE_SAMESITE
+        value: Lax
+
+    # Optional for persistent uploads on paid Render plans:
+    # disk:
+    #   name: exan-uploads
+    #   mountPath: /app/uploads
+    #   sizeGB: 1

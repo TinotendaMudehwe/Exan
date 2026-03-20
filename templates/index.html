@@ -2,36 +2,152 @@
 <html>
 <head>
 <title>Exan Dashboard</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=20260316d">
 </head>
 
-<body>
+<body data-page-notice="{{ page_notice or '' }}">
+
+<div class="loading-overlay" data-loading-overlay hidden>
+	<div class="loading-shell">
+		<div class="loading-skeleton loading-line wide"></div>
+		<div class="loading-skeleton loading-line"></div>
+		<div class="loading-skeleton loading-card"></div>
+		<p>Analyzing workbook and preparing visuals...</p>
+	</div>
+</div>
+
+<div class="toast-tray" data-toast-tray></div>
 
 <div class="page-shell">
 	<header class="topbar panel">
 		<div>
 			<p class="eyebrow">Exan</p>
-			<h1>Analytics Dashboard</h1>
-			<p class="subtitle">Upload, analyze, and explore transaction trends in one place.</p>
-			<p class="subtitle">Active window:
-				<strong>
-					{% if selected_window == "7" %}Last 7 days{% elif selected_window == "30" %}Last 30 days{% elif selected_window == "90" %}Last 90 days{% else %}All data{% endif %}
-				</strong>
-			</p>
-			<p class="subtitle">Active product: <strong>{{ selected_product if selected_product != "all" else "All products" }}</strong></p>
-			<p class="subtitle">Active company: <strong>{{ selected_company if selected_company != "all" else "All companies" }}</strong></p>
 		</div>
 		<div class="topbar-actions">
+			<a class="inline-action-link" href="/advanced/charts">Advanced: Charts</a>
+			<div class="theme-picker">
+				<label for="theme_selector_index">Theme</label>
+				<select id="theme_selector_index" class="theme-select">
+					<option value="dark">Dark</option>
+					<option value="light">Light</option>
+					<option value="amber">Amber</option>
+					<option value="forest">Forest</option>
+				</select>
+			</div>
 			<a class="icon-link" href="/settings" title="Settings" aria-label="Admin Settings">&#9881;</a>
 			<a class="logout-link" href="/logout">Logout</a>
 		</div>
 	</header>
 
 	<main class="dashboard-grid">
+		<section class="panel report-cover-panel">
+			<div class="report-cover-head">
+				<div>
+					<p class="section-eyebrow">Report Mode</p>
+					<h2>Excel Analysis Report Canvas</h2>
+					<p class="subtitle">Generated {{ report_meta.generated_at }} | Base file: {{ report_meta.primary_filename }}{% if has_secondary_upload %} | Comparison file: {{ report_meta.secondary_filename }}{% else %} | Comparison mode inactive{% endif %}</p>
+				</div>
+				<div class="report-actions">
+					<a class="secondary-button secondary-link" href="/report-preview">Open Preview</a>
+					<a class="secondary-button secondary-link" href="/report-preview">Print Report</a>
+				</div>
+			</div>
+			<ul class="summary-list report-meta-list">
+				<li><span>Date Window</span><strong>{{ report_meta.date_window }}</strong></li>
+				<li><span>Product Filter</span><strong>{{ report_meta.product_filter }}</strong></li>
+				<li><span>Company Filter</span><strong>{{ report_meta.company_filter }}</strong></li>
+			</ul>
+		</section>
+
+		<section id="overview" class="panel hierarchy-hero">
+			<p class="section-eyebrow">Overview</p>
+			<h1>Excel Analysis Workspace</h1>
+			<p class="subtitle">Upload, compare, and export data in one flow. This section surfaces the most important numbers first.</p>
+
+			{% if results or comparison_results %}
+			<div class="kpi-grid hierarchy-kpi-grid">
+				<article class="panel kpi-card hierarchy-kpi">
+					<p class="kpi-label">Base Transactions</p>
+					<p class="kpi-value">{{ (results.total_transactions if results else 0)|fmt_num }}</p>
+					<div class="kpi-sparkline-wrap" title="Transactions trend over last 14 days">
+						<svg class="kpi-sparkline sparkline-{{ kpi_sparklines.transactions.direction if kpi_sparklines else 'flat' }}" viewBox="0 0 120 32" preserveAspectRatio="none" role="img" aria-label="Transactions sparkline">
+							<polyline points="{{ kpi_sparklines.transactions.points if kpi_sparklines else '0,16 120,16' }}"></polyline>
+						</svg>
+					</div>
+					<p class="kpi-trend kpi-trend-{{ kpi_trends.transactions.direction if kpi_trends else 'flat' }}">
+						{% if kpi_trends and kpi_trends.transactions.direction == 'up' %}&#9650;{% elif kpi_trends and kpi_trends.transactions.direction == 'down' %}&#9660;{% else %}&#9679;{% endif %}
+						{{ kpi_trends.transactions.label if kpi_trends else 'No trend' }}
+					</p>
+				</article>
+				<article class="panel kpi-card hierarchy-kpi">
+					<p class="kpi-label">Base Total Debit</p>
+					<p class="kpi-value">{{ (results.total_debit if results else 0)|fmt_num }}</p>
+					<div class="kpi-sparkline-wrap" title="Debit trend over last 14 days">
+						<svg class="kpi-sparkline sparkline-{{ kpi_sparklines.debit.direction if kpi_sparklines else 'flat' }}" viewBox="0 0 120 32" preserveAspectRatio="none" role="img" aria-label="Debit sparkline">
+							<polyline points="{{ kpi_sparklines.debit.points if kpi_sparklines else '0,16 120,16' }}"></polyline>
+						</svg>
+					</div>
+					<p class="kpi-trend kpi-trend-{{ kpi_trends.debit.direction if kpi_trends else 'flat' }}">
+						{% if kpi_trends and kpi_trends.debit.direction == 'up' %}&#9650;{% elif kpi_trends and kpi_trends.debit.direction == 'down' %}&#9660;{% else %}&#9679;{% endif %}
+						{{ kpi_trends.debit.label if kpi_trends else 'No trend' }}
+					</p>
+				</article>
+				<article class="panel kpi-card hierarchy-kpi">
+					<p class="kpi-label">Base Total Credit</p>
+					<p class="kpi-value">{{ (results.total_credit if results else 0)|fmt_num }}</p>
+					<div class="kpi-sparkline-wrap" title="Credit trend over last 14 days">
+						<svg class="kpi-sparkline sparkline-{{ kpi_sparklines.credit.direction if kpi_sparklines else 'flat' }}" viewBox="0 0 120 32" preserveAspectRatio="none" role="img" aria-label="Credit sparkline">
+							<polyline points="{{ kpi_sparklines.credit.points if kpi_sparklines else '0,16 120,16' }}"></polyline>
+						</svg>
+					</div>
+					<p class="kpi-trend kpi-trend-{{ kpi_trends.credit.direction if kpi_trends else 'flat' }}">
+						{% if kpi_trends and kpi_trends.credit.direction == 'up' %}&#9650;{% elif kpi_trends and kpi_trends.credit.direction == 'down' %}&#9660;{% else %}&#9679;{% endif %}
+						{{ kpi_trends.credit.label if kpi_trends else 'No trend' }}
+					</p>
+				</article>
+				<article class="panel kpi-card hierarchy-kpi kpi-card-drift kpi-card-drift-{{ comparison_health.tone }}">
+					<p class="kpi-label">Comparison Selected Items</p>
+					<p class="kpi-value">{{ ((comparison_results.selected_compare_items|length) if comparison_results else 0)|fmt_num }}</p>
+					<p class="kpi-trend kpi-trend-flat">&#9679; Selected scope: {{ selected_compare_item_scope|replace('_', ' ')|title }}</p>
+					<p class="kpi-trend kpi-trend-{{ comparison_health.tone if comparison_health.tone in ['positive', 'negative'] else 'flat' }}">{{ comparison_health.label }}</p>
+				</article>
+			</div>
+
+			{% if comparison_results %}
+			<ul class="summary-list hierarchy-summary-list">
+				<li><span>All in comparison (File B)</span><strong><span class="scope-pill scope-pill-info">{{ comparison_results.all_in_comparison_count|fmt_num }}</span></strong></li>
+				<li><span>Found in both datasets</span><strong><span class="scope-pill scope-pill-positive">{{ comparison_results.shared_in_both_count|fmt_num }}</span></strong></li>
+				<li><span>Only in comparison (File B)</span><strong><span class="scope-pill scope-pill-negative">{{ comparison_results.unique_in_comparison_count|fmt_num }}</span></strong></li>
+				<li><span>Shared overlap ratio</span><strong><span class="scope-pill scope-pill-neutral">{{ comparison_health.shared_ratio|round(1) }}%</span></strong></li>
+			</ul>
+			{% endif %}
+			{% else %}
+			<p class="subtitle">No analyzed output yet. Upload data files to populate summary cards.</p>
+			{% endif %}
+		</section>
+
 		<section class="controls-grid">
-			<article class="panel control-card">
-				<h2>Upload Spreadsheets</h2>
-				<p class="subtitle">Upload File A and File B to extract, compare, and visualize shared datasets.</p>
+			<details id="upload-controls" class="panel control-card control-drawer" open>
+				<summary class="drawer-summary">
+					<span>
+				<p class="section-eyebrow">Step 1</p>
+				<h2>Upload Files</h2>
+					</span>
+					<span class="drawer-hint">Open/close</span>
+				</summary>
+				<p class="subtitle">Upload one base file to analyze immediately. Add a second file when you want comparison mode.</p>
+				<form method="GET" action="/export-detailed-report" class="export-inline-form" style="margin-top:8px;">
+					<label for="report_format" class="subtitle">Detailed Report Export</label>
+					<div class="export-inline-controls">
+						<select id="report_format" name="format">
+							<option value="txt">TXT</option>
+							<option value="csv">CSV</option>
+							<option value="pdf">PDF</option>
+						</select>
+						<button type="submit" data-export-trigger>Export</button>
+					</div>
+					<p class="subtitle">Filename includes current filters and comparison scope.</p>
+				</form>
 				{% if upload_error %}
 				<p class="form-alert error">{{ upload_error }}</p>
 				{% endif %}
@@ -39,51 +155,42 @@
 				{% if primary_filename %}
 				<p class="subtitle">File A name: <strong>{{ primary_filename }}</strong></p>
 				{% endif %}
-				<p class="subtitle">File B status: <strong>{{ "Uploaded" if has_secondary_upload else "Not uploaded" }}</strong></p>
+				{% if has_primary_upload %}
+				<p class="subtitle">File A auto-corrections: <strong>{{ auto_corrections_primary|fmt_num }}</strong> row{{ '' if auto_corrections_primary == 1 else 's' }} adjusted.</p>
+				{% endif %}
+				<p class="subtitle">File B status: <strong>{{ "Uploaded" if has_secondary_upload else "Optional / not uploaded" }}</strong></p>
 				{% if secondary_filename %}
 				<p class="subtitle">File B name: <strong>{{ secondary_filename }}</strong></p>
 				{% endif %}
+				{% if has_secondary_upload %}
+				<p class="subtitle">File B auto-corrections: <strong>{{ auto_corrections_secondary|fmt_num }}</strong> row{{ '' if auto_corrections_secondary == 1 else 's' }} adjusted.</p>
+				{% endif %}
+
 				<form method="POST" enctype="multipart/form-data" class="stack-form">
 					<input type="hidden" name="apply_filters" value="1">
-					<label for="date_window_upload">Date Window</label>
-					<select id="date_window_upload" name="date_window">
-						<option value="all" {% if selected_window == "all" %}selected{% endif %}>All data</option>
-						<option value="7" {% if selected_window == "7" %}selected{% endif %}>Last 7 days</option>
-						<option value="30" {% if selected_window == "30" %}selected{% endif %}>Last 30 days</option>
-						<option value="90" {% if selected_window == "90" %}selected{% endif %}>Last 90 days</option>
-					</select>
 
-					<label for="product_filter">Product</label>
-					<select id="product_filter" name="product_filter">
-						<option value="all" {% if selected_product == "all" %}selected{% endif %}>All products</option>
-						{% for product in product_options or [] %}
-						<option value="{{ product }}" {% if selected_product == product %}selected{% endif %}>{{ product }}</option>
-						{% endfor %}
-					</select>
+					<label for="file_primary">File A (base dataset)</label>
+					<input id="file_primary" type="file" name="file_primary" accept=".xls,.xlsx,.csv">
 
-					<label for="company_filter">Company</label>
-					<select id="company_filter" name="company_filter">
-						<option value="all" {% if selected_company == "all" %}selected{% endif %}>All companies</option>
-						{% for company in company_options or [] %}
-						<option value="{{ company }}" {% if selected_company == company %}selected{% endif %}>{{ company }}</option>
-						{% endfor %}
-					</select>
+					<label for="file_secondary">File B (optional comparison dataset)</label>
+					<input id="file_secondary" type="file" name="file_secondary" accept=".xls,.xlsx,.csv">
 
-					<label>Comparison Metrics (shared columns)</label>
-					<div class="checkbox-grid">
-						{% for metric in available_compare_columns or [] %}
-						<label class="checkbox-item" for="metric_{{ metric }}">
-							<input
-								id="metric_{{ metric }}"
-								type="checkbox"
-								name="compare_columns"
-								value="{{ metric }}"
-								{% if metric in (selected_compare_columns or []) %}checked{% endif %}
-							>
-							<span>{{ metric }}</span>
-						</label>
-						{% endfor %}
-					</div>
+					<button type="submit">Upload and Analyze</button>
+				</form>
+			</details>
+
+			<details id="compare-controls" class="panel control-card control-drawer" open>
+				<summary class="drawer-summary">
+					<span>
+				<p class="section-eyebrow">Step 2</p>
+				<h2>Comparison Controls</h2>
+					</span>
+					<span class="drawer-hint">Open/close</span>
+				</summary>
+				{% if comparison_ready %}
+				<p class="subtitle">Select metrics, category, and items from File B (comparison dataset).</p>
+				<form method="POST" class="stack-form">
+					<input type="hidden" name="apply_filters" value="1">
 
 					<label for="compare_category">Comparison Category</label>
 					<select id="compare_category" name="compare_category">
@@ -92,229 +199,356 @@
 						{% endfor %}
 					</select>
 
-					<label for="file_primary">File A (base dataset)</label>
-					<input id="file_primary" type="file" name="file_primary" accept=".xls,.xlsx">
+					<label>Comparison Metrics</label>
+					<div class="checkbox-grid">
+						{% for metric_name in available_compare_columns or [] %}
+						<label class="checkbox-item">
+							<input type="checkbox" name="compare_columns" value="{{ metric_name }}" {% if metric_name in (selected_compare_columns or []) %}checked{% endif %}>
+							<span>{{ metric_name }}</span>
+						</label>
+						{% endfor %}
+					</div>
 
-					<label for="file_secondary">File B (comparison dataset)</label>
-					<input id="file_secondary" type="file" name="file_secondary" accept=".xls,.xlsx">
+					<label for="compare_items">Items In File B (multi-select)</label>
+					<label for="compare_item_scope">Item Scope</label>
+					<select id="compare_item_scope" name="compare_item_scope">
+						<option value="both" {% if selected_compare_item_scope == "both" %}selected{% endif %}>Found in both File A and File B</option>
+						<option value="all_in_comparison" {% if selected_compare_item_scope == "all_in_comparison" %}selected{% endif %}>All found in File B</option>
+						<option value="only_in_comparison" {% if selected_compare_item_scope == "only_in_comparison" %}selected{% endif %}>Only in File B</option>
+					</select>
 
-					<button type="submit">Apply Filters, Analyze, and Compare</button>
-				</form>
-			</article>
-
-			{% if merchants %}
-			<article class="panel control-card">
-				<h2>Merchant Drilldown</h2>
-				<p class="subtitle">Select a merchant inside the current date range.</p>
-				<form method="POST" class="stack-form">
-					<input type="hidden" name="apply_filters" value="1">
-					<input type="hidden" name="date_window" value="{{ selected_window }}">
-					<input type="hidden" name="product_filter" value="{{ selected_product }}">
-					<input type="hidden" name="company_filter" value="{{ selected_company }}">
-					<input type="hidden" name="compare_category" value="{{ selected_compare_category }}">
-					{% for metric in selected_compare_columns or [] %}
-					<input type="hidden" name="compare_columns" value="{{ metric }}">
-					{% endfor %}
-					<select name="merchant">
-						{% for merchant in merchants %}
-						<option value="{{ merchant }}">{{ merchant }}</option>
+					<label for="compare_items">Selectable Items (based on scope)</label>
+					<select id="compare_items" name="compare_items" multiple class="multi-select-box">
+						{% for item_name in available_compare_items or [] %}
+						<option value="{{ item_name }}" {% if item_name in (selected_compare_items or []) %}selected{% endif %}>{{ item_name }}</option>
 						{% endfor %}
 					</select>
-					<button type="submit">Analyze Merchant</button>
+
+					<button type="submit">Apply Comparison Selection</button>
 				</form>
-			</article>
-			{% endif %}
+				{% else %}
+				<p class="subtitle">Comparison controls unlock after a second file is uploaded. Single-file analysis is available now.</p>
+				{% endif %}
+			</details>
 		</section>
 
-		{% if results %}
-		<section class="kpi-grid">
-			<article class="panel kpi-card">
-				<p class="kpi-label">Total Transactions</p>
-				<p class="kpi-value">{{ results.total_transactions }}</p>
-			</article>
-			<article class="panel kpi-card">
-				<p class="kpi-label">Total Debit</p>
-				<p class="kpi-value">{{ results.total_debit }}</p>
-			</article>
-			<article class="panel kpi-card">
-				<p class="kpi-label">Total Credit</p>
-				<p class="kpi-value">{{ results.total_credit }}</p>
-			</article>
-			{% if merchant_results %}
-			<article class="panel kpi-card">
-				<p class="kpi-label">Merchant Transactions</p>
-				<p class="kpi-value">{{ merchant_results.merchant_transactions }}</p>
-			</article>
-			{% endif %}
-		</section>
+		<section id="storytelling" class="panel storytelling-panel">
+			<p class="section-eyebrow">Narrative View</p>
+			<h2>Data Storytelling</h2>
+			<p class="subtitle">Quick answers to the three reporting questions users ask most often.</p>
 
-		<section class="support-grid">
-			<article class="panel">
-				<h2>Top Products</h2>
-				<div class="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>#</th>
-								<th>Product</th>
-								<th>Transactions</th>
-							</tr>
-						</thead>
-						<tbody>
-							{% for product, count in results.top_products.items() %}
-							<tr>
-								<td>{{ loop.index }}</td>
-								<td>{{ product }}</td>
-								<td>{{ count }}</td>
-							</tr>
-							{% endfor %}
-						</tbody>
-					</table>
+			<form method="POST" class="story-ask-form">
+				<input type="hidden" name="storytelling_ask" value="1">
+				<label for="storytelling_question">Ask a storytelling question</label>
+				<div class="story-ask-controls">
+					<input id="storytelling_question" name="storytelling_question" type="text" value="{{ storytelling_question or '' }}" placeholder="Example: What changed most this week?" maxlength="240" required>
+					<button type="submit">Ask</button>
 				</div>
-			</article>
+				<p class="subtitle">Try: "What changed this week?", "Which metric has biggest mismatch?", "Which currency dominates?"</p>
+			</form>
 
-			{% if merchant_results %}
-			<article class="panel">
-				<h2>Merchant Summary</h2>
-				<ul class="summary-list">
-					<li><span>Total Debit</span><strong>{{ merchant_results.merchant_total_debit }}</strong></li>
-					<li><span>Total Credit</span><strong>{{ merchant_results.merchant_total_credit }}</strong></li>
+			<div class="story-quick-questions">
+				<form method="POST" class="story-chip-form">
+					<input type="hidden" name="storytelling_ask" value="1">
+					<input type="hidden" name="storytelling_question" value="What changed this week?">
+					<button type="submit" class="story-chip">What changed this week?</button>
+				</form>
+				<form method="POST" class="story-chip-form">
+					<input type="hidden" name="storytelling_ask" value="1">
+					<input type="hidden" name="storytelling_question" value="Which metric has the biggest mismatch?">
+					<button type="submit" class="story-chip">Biggest mismatch</button>
+				</form>
+				<form method="POST" class="story-chip-form">
+					<input type="hidden" name="storytelling_ask" value="1">
+					<input type="hidden" name="storytelling_question" value="Which currency dominates the dataset?">
+					<button type="submit" class="story-chip">Currency dominance</button>
+				</form>
+				<form method="POST" class="story-chip-form">
+					<input type="hidden" name="storytelling_ask" value="1">
+					<input type="hidden" name="storytelling_question" value="Who is the top merchant right now?">
+					<button type="submit" class="story-chip">Top merchant</button>
+				</form>
+			</div>
+
+			{% if storytelling_answer %}
+			<article class="story-answer-card">
+				<p class="section-eyebrow">Answer</p>
+				<p>{{ storytelling_answer }}</p>
+			</article>
+			{% endif %}
+
+			{% if storytelling_qa_history %}
+			<div class="story-qa-history">
+				<p class="section-eyebrow">Recent Questions</p>
+				<ul class="story-history-list">
+					{% for qa in storytelling_qa_history|reverse %}
+					<li>
+						<p><strong>{{ qa.asked_at }}</strong> · {{ qa.question }}</p>
+						<p>{{ qa.answer }}</p>
+					</li>
+					{% endfor %}
 				</ul>
-			</article>
-			{% endif %}
-		</section>
-		{% endif %}
-
-		{% if charts %}
-		<section class="charts-grid">
-			<article class="panel chart-card">
-				<h3>Top Products (Bar)</h3>
-				<div class="chart-frame">{{ charts.product_chart|safe }}</div>
-			</article>
-
-			{% if charts.share_chart %}
-			<article class="panel chart-card">
-				<h3>Debit Share by Product (Pie)</h3>
-				<div class="chart-frame">{{ charts.share_chart|safe }}</div>
-			</article>
+			</div>
 			{% endif %}
 
-			<article class="panel chart-card">
-				<h3>Top Merchants by Debit</h3>
-				<div class="chart-frame">{{ charts.merchant_chart|safe }}</div>
-			</article>
+			<div class="story-grid">
+				<article class="story-card">
+					<h3>{{ storytelling_insights.what_changed.title }}</h3>
+					<ul class="story-list">
+						{% for item in storytelling_insights.what_changed.bullets %}
+						<li>
+							{% if item.target %}<a class="story-link" href="{{ item.target }}">{{ item.text }}</a>{% else %}{{ item.text }}{% endif %}
+						</li>
+						{% endfor %}
+					</ul>
+				</article>
 
-			<article class="panel chart-card">
-				<h3>Transaction Value Scale</h3>
-				<div class="chart-frame">{{ charts.revenue_chart|safe }}</div>
-			</article>
+				<article class="story-card">
+					<h3>{{ storytelling_insights.top_drivers.title }}</h3>
+					<ul class="story-list">
+						{% for item in storytelling_insights.top_drivers.bullets %}
+						<li>
+							{% if item.target %}<a class="story-link" href="{{ item.target }}">{{ item.text }}</a>{% else %}{{ item.text }}{% endif %}
+						</li>
+						{% endfor %}
+					</ul>
+				</article>
 
-			{% if charts.trend_chart %}
-			<article class="panel chart-card">
-				<h3>Trend Over Time</h3>
-				<div class="chart-frame">{{ charts.trend_chart|safe }}</div>
-			</article>
-			{% endif %}
-		</section>
-		{% endif %}
-
-		{% if comparison_results %}
-		<section class="kpi-grid compare-kpi-grid">
-			<article class="panel kpi-card compare-kpi">
-				<p class="kpi-label">File A Transactions</p>
-				<p class="kpi-value">{{ comparison_results.dataset_a_transactions|fmt_num }}</p>
-			</article>
-			<article class="panel kpi-card compare-kpi">
-				<p class="kpi-label">File B Transactions</p>
-				<p class="kpi-value">{{ comparison_results.dataset_b_transactions|fmt_num }}</p>
-			</article>
-			<article class="panel kpi-card compare-kpi">
-				<p class="kpi-label">Shared Products</p>
-				<p class="kpi-value">{{ comparison_results.shared_products_count|fmt_num }}</p>
-			</article>
-			<article class="panel kpi-card compare-kpi">
-				<p class="kpi-label">Shared Companies</p>
-				<p class="kpi-value">{{ comparison_results.shared_companies_count|fmt_num }}</p>
-			</article>
+				<article class="story-card">
+					<h3>{{ storytelling_insights.comparison_story.title }}</h3>
+					<ul class="story-list">
+						{% for item in storytelling_insights.comparison_story.bullets %}
+						<li>
+							{% if item.target %}<a class="story-link" href="{{ item.target }}">{{ item.text }}</a>{% else %}{{ item.text }}{% endif %}
+						</li>
+						{% endfor %}
+					</ul>
+				</article>
+			</div>
 		</section>
 
-		<section class="support-grid compare-support-grid">
-			<article class="panel">
-				<h2>Selected Column Comparison</h2>
-				<div class="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>Column</th>
-								<th>File A Total</th>
-								<th>File B Total</th>
-								<th>Delta (B - A)</th>
-							</tr>
-						</thead>
-						<tbody>
-							{% for row in comparison_results.column_comparisons or [] %}
-							<tr>
-								<td>{{ row.column }}</td>
-								<td>{{ row.file_a_total|fmt_num }}</td>
-								<td>{{ row.file_b_total|fmt_num }}</td>
-								<td>{{ row.delta|fmt_num }}</td>
-							</tr>
+		<section id="signals" class="panel signals-panel">
+			<p class="section-eyebrow">Signal Layer</p>
+			<h2>Insight Signals</h2>
+			<p class="subtitle">Priority callouts that flag risk, variance, and opportunity before deep analysis.</p>
+
+			<div class="signals-grid">
+				{% for signal in insight_signals or [] %}
+				<a class="signal-card signal-{{ signal.level }}" href="{{ signal.target or '#overview' }}">
+					<p class="signal-level">{{ signal.level|upper }}</p>
+					<h3>{{ signal.title }}</h3>
+					<p>{{ signal.detail }}</p>
+				</a>
+				{% endfor %}
+			</div>
+		</section>
+
+		<section class="panel starter-panel">
+			<p class="section-eyebrow">Step 3</p>
+			<h2>Starter Dashboard Canvas</h2>
+			<p class="subtitle">Detailed analysis blocks. Review ranking, currency, and overlap diagnostics.</p>
+			<div class="starter-grid">
+				<article id="block01" class="starter-slot block01-slot">
+					<p class="block-question">Which rows are driving the strongest product activity?</p>
+					<h3>Block 01</h3>
+					<p class="slot-subtitle">Columns: App Description, Product, Count, ValueNett, ValueDebit</p>
+					<input type="search" class="table-search-input" data-block01-search placeholder="Search rows by app description or product">
+					<form method="GET" action="#block01" class="block01-controls">
+						<label for="block01_sort">Sort Order</label>
+						<select id="block01_sort" name="block01_sort">
+							<option value="highest" {% if block01_sort_order == "highest" %}selected{% endif %}>Highest performing</option>
+							<option value="least" {% if block01_sort_order == "least" %}selected{% endif %}>Least performing</option>
+							<option value="all" {% if block01_sort_order == "all" %}selected{% endif %}>All</option>
+						</select>
+
+						<label for="block01_metric">Ranking Metric</label>
+						<select id="block01_metric" name="block01_metric">
+							{% for metric_name in block01_metric_options or ["Count", "ValueNett"] %}
+							<option value="{{ metric_name }}" {% if block01_metric == metric_name %}selected{% endif %}>{{ metric_name }}</option>
 							{% endfor %}
-						</tbody>
-					</table>
-				</div>
-			</article>
+						</select>
 
-			<article class="panel">
-				<h2>Shared Dataset Preview</h2>
-				<p class="subtitle">Category used: <strong>{{ comparison_results.selected_compare_category if comparison_results.selected_compare_category else 'Not selected' }}</strong></p>
-				<p class="subtitle">Columns used: <strong>{{ comparison_results.selected_compare_columns|join(', ') if comparison_results.selected_compare_columns else 'None selected' }}</strong></p>
-				<p class="subtitle">Products: {{ comparison_results.shared_products_preview|join(', ') if comparison_results.shared_products_preview else 'None found' }}</p>
-				<p class="subtitle">Companies: {{ comparison_results.shared_companies_preview|join(', ') if comparison_results.shared_companies_preview else 'None found' }}</p>
-			</article>
+						<label for="block01_top_n">Top Rows</label>
+						<select id="block01_top_n" name="block01_top_n">
+							<option value="all" {% if block01_top_n == "all" %}selected{% endif %}>All</option>
+							<option value="5" {% if block01_top_n == "5" %}selected{% endif %}>Top 5</option>
+							<option value="10" {% if block01_top_n == "10" %}selected{% endif %}>Top 10</option>
+							<option value="20" {% if block01_top_n == "20" %}selected{% endif %}>Top 20</option>
+						</select>
+
+						<label class="checkbox-item inline-check">
+							<input type="checkbox" id="block01_anomalies_only" name="block01_anomalies_only" value="1" {% if block01_anomalies_only %}checked{% endif %}>
+							<span>Show anomalies only</span>
+						</label>
+
+						<button type="submit">Apply</button>
+					</form>
+					{% if block01_rows and (block01_rows|length > 0) %}
+					<p class="b01-scroll-hint">&#8597; hover list &amp; scroll &nbsp;|&nbsp; {{ block01_rows|length }} rows</p>
+					<div class="slot-list-wrap">
+						<table class="block01-table" data-block01-table>
+							<thead>
+								<tr>
+									<th class="col-rank">#</th>
+									<th>App Description</th>
+									<th>Product</th>
+									<th>Count</th>
+									<th>ValueNett</th>
+									<th>ValueDebit</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for row in block01_rows %}
+								<tr data-search="{{ row.app_description }} {{ row.product }}">
+									<td class="col-rank">{{ row.rank }}</td>
+									<td>{{ row.app_description }}</td>
+									<td>{{ row.product }}</td>
+									<td>{{ row.count|fmt_num }}</td>
+									<td>{{ row.valuenett|fmt_num }}</td>
+									<td>{{ row.valuedebit|fmt_num }}</td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+					{% else %}
+					<p>No rows available for Block 01 yet. Upload a file, or change the Top N / anomaly filters.</p>
+					{% endif %}
+				</article>
+				<article id="block02" class="starter-slot block02-slot">
+					<p class="block-question">Which currency currently dominates the dataset?</p>
+					<h3>Block 02</h3>
+					<p class="slot-subtitle">Currency summary from the active filtered base dataset.</p>
+					{% if currency_rows and (currency_rows|length > 0) %}
+					<div class="slot-list-wrap">
+						<table class="block01-table">
+							<thead>
+								<tr>
+									<th>Currency</th>
+									<th>Transactions</th>
+									<th>Count</th>
+									<th>ValueNett</th>
+									<th>ValueDebit</th>
+									<th>ValueCredit</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for row in currency_rows %}
+								<tr>
+									<td>{{ row.Currency }}</td>
+									<td>{{ row.transactions|fmt_num }}</td>
+									<td>{{ row.total_count|fmt_num }}</td>
+									<td>{{ row.total_valuenett|fmt_num }}</td>
+									<td>{{ row.total_valuedebit|fmt_num }}</td>
+									<td>{{ row.total_valuecredit|fmt_num }}</td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+					{% else %}
+					<p>No currency data available yet. Currency summaries appear after a successful base dataset analysis.</p>
+					{% endif %}
+				</article>
+				<article id="block03" class="starter-slot block03-slot">
+					<p class="block-question">Where do the base and comparison datasets diverge?</p>
+					<h3>Block 03</h3>
+					<p class="slot-subtitle">Comparison item sets for the selected category.</p>
+					{% if comparison_results %}
+					<ul class="summary-list">
+						<li><span>All found in File B</span><strong><span class="scope-pill scope-pill-info">{{ comparison_results.all_in_comparison_count|fmt_num }}</span></strong></li>
+						<li><span>Found in both File A and File B</span><strong><span class="scope-pill scope-pill-positive">{{ comparison_results.shared_in_both_count|fmt_num }}</span></strong></li>
+						<li><span>Only found in File B</span><strong><span class="scope-pill scope-pill-negative">{{ comparison_results.unique_in_comparison_count|fmt_num }}</span></strong></li>
+						<li><span>Selected items from File B</span><strong><span class="scope-pill scope-pill-neutral">{{ (comparison_results.selected_compare_items|length)|fmt_num }}</span></strong></li>
+					</ul>
+
+					{% if comparison_delta_rows %}
+					<p class="slot-subtitle comparison-metrics-subtitle">Metric variance summary</p>
+					<div class="slot-list-wrap">
+						<table class="block01-table comparison-metrics-table">
+							<thead>
+								<tr>
+									<th>Metric</th>
+									<th>File A</th>
+									<th>File B</th>
+									<th>Delta</th>
+									<th>Variance</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for row in comparison_delta_rows %}
+								<tr>
+									<td>{{ row.column }}</td>
+									<td>{{ row.file_a_total|fmt_num }}</td>
+									<td>{{ row.file_b_total|fmt_num }}</td>
+									<td class="comparison-delta comparison-delta-{{ row.tone }}">{{ row.delta|fmt_num }}</td>
+									<td><span class="comparison-badge comparison-badge-{{ row.tone }}">{{ row.status_label }} · {{ row.delta_pct_label }}</span></td>
+								</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+					{% endif %}
+
+					<p class="slot-subtitle" style="margin-top:12px;">All items in File B (preview)</p>
+					<div class="slot-list-wrap">
+						<ul class="summary-list compact-list">
+							{% for item_name in comparison_results.all_in_comparison_preview %}
+							<li>
+								<span>{{ item_name }}</span>
+								<strong><span class="scope-pill scope-pill-info">File B</span></strong>
+							</li>
+							{% endfor %}
+						</ul>
+					</div>
+
+					<p class="slot-subtitle" style="margin-top:12px;">Found in both datasets (preview)</p>
+					<div class="slot-list-wrap">
+						<ul class="summary-list compact-list">
+							{% for item_name in comparison_results.shared_in_both_preview %}
+							<li>
+								<span>{{ item_name }}</span>
+								<strong><span class="scope-pill scope-pill-positive">Both</span></strong>
+							</li>
+							{% endfor %}
+						</ul>
+					</div>
+
+					<p class="slot-subtitle" style="margin-top:12px;">Only in File B (preview)</p>
+					<div class="slot-list-wrap">
+						<ul class="summary-list compact-list">
+							{% for item_name in comparison_results.unique_in_comparison_preview %}
+							<li>
+								<span>{{ item_name }}</span>
+								<strong><span class="scope-pill scope-pill-negative">Only B</span></strong>
+							</li>
+							{% endfor %}
+						</ul>
+					</div>
+					{% else %}
+					<p>Upload both files and apply comparison settings to view overlap, mismatch, and selection insights.</p>
+					{% endif %}
+				</article>
+				<details class="starter-slot starter-slot-collapsible">
+					<summary>
+						<h3>Block 05</h3>
+						<span class="drawer-hint">Expand</span>
+					</summary>
+					<p>Waiting for your field definition.</p>
+				</details>
+				<details class="starter-slot starter-slot-collapsible">
+					<summary>
+						<h3>Block 06</h3>
+						<span class="drawer-hint">Expand</span>
+					</summary>
+					<p>Waiting for your field definition.</p>
+				</details>
+			</div>
 		</section>
-
-		{% if comparison_charts %}
-		<section class="charts-grid">
-			{% if comparison_charts.compare_selected_columns_chart %}
-			<article class="panel chart-card">
-				<h3>Selected Columns: File A vs File B</h3>
-				<div class="chart-frame">{{ comparison_charts.compare_selected_columns_chart|safe }}</div>
-			</article>
-			{% endif %}
-
-			{% if comparison_charts.compare_selected_category_chart %}
-			<article class="panel chart-card">
-				<h3>Shared Category Comparison</h3>
-				<div class="chart-frame">{{ comparison_charts.compare_selected_category_chart|safe }}</div>
-			</article>
-			{% endif %}
-
-			{% if comparison_charts.compare_product_chart %}
-			<article class="panel chart-card">
-				<h3>Shared Products: Debit Comparison</h3>
-				<div class="chart-frame">{{ comparison_charts.compare_product_chart|safe }}</div>
-			</article>
-			{% endif %}
-
-			{% if comparison_charts.compare_company_chart %}
-			<article class="panel chart-card">
-				<h3>Shared Companies: Debit Comparison</h3>
-				<div class="chart-frame">{{ comparison_charts.compare_company_chart|safe }}</div>
-			</article>
-			{% endif %}
-
-			{% if comparison_charts.compare_trend_chart %}
-			<article class="panel chart-card">
-				<h3>Debit Trend Comparison</h3>
-				<div class="chart-frame">{{ comparison_charts.compare_trend_chart|safe }}</div>
-			</article>
-			{% endif %}
-		</section>
-		{% endif %}
-		{% endif %}
 	</main>
 </div>
 
+<script src="/static/theme.js"></script>
+<script src="/static/dashboard.js"></script>
 </body>
 </html>

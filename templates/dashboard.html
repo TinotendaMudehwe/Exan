@@ -3,7 +3,7 @@
 
 <head>
 <title>Analytics Dashboard</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/style.css?v=20260316d">
 </head>
 
 <body>
@@ -12,56 +12,93 @@
 	<header class="topbar panel">
 		<div>
 			<p class="eyebrow">Exan</p>
-			<h1>Analytics Dashboard</h1>
-			<p class="subtitle">A clean view of performance metrics and trends.</p>
 		</div>
-		<a class="logout-link" href="/logout">Logout</a>
+		<div class="topbar-actions">
+			<div class="theme-picker">
+				<label for="theme_selector_dashboard">Theme</label>
+				<select id="theme_selector_dashboard" class="theme-select">
+					<option value="dark">Dark</option>
+					<option value="light">Light</option>
+					<option value="amber">Amber</option>
+					<option value="forest">Forest</option>
+				</select>
+			</div>
+			<a class="logout-link" href="/logout">Logout</a>
+		</div>
 	</header>
 
-	<section class="kpi-grid">
-		<article class="panel kpi-card">
-			<p class="kpi-label">Total Transactions</p>
-			<p class="kpi-value">{{ results.total_transactions }}</p>
-		</article>
-		<article class="panel kpi-card">
-			<p class="kpi-label">Total Debit</p>
-			<p class="kpi-value">{{ results.total_debit }}</p>
-		</article>
-		<article class="panel kpi-card">
-			<p class="kpi-label">Total Credit</p>
-			<p class="kpi-value">{{ results.total_credit }}</p>
-		</article>
-	</section>
+	<section class="panel starter-panel">
+		<h2>Starter Dashboard Canvas</h2>
+		<p class="subtitle">All data display is disabled. Define what each block should show next.</p>
+		<div class="starter-grid">
+			<article id="block01" class="starter-slot block01-slot">
+				<h3>Block 01</h3>
+				<p class="slot-subtitle">Columns: App Description, Product, Count, ValueNett, ValueDebit</p>
+				<form method="GET" action="#block01" class="block01-controls">
+					<label for="block01_sort">Sort Order</label>
+					<select id="block01_sort" name="block01_sort">
+						<option value="highest" {% if block01_sort_order == "highest" %}selected{% endif %}>Highest performing</option>
+						<option value="least" {% if block01_sort_order == "least" %}selected{% endif %}>Least performing</option>
+						<option value="all" {% if block01_sort_order == "all" %}selected{% endif %}>All</option>
+					</select>
 
-	<section class="charts-grid">
-		<article class="panel chart-card">
-			<h3>Top Products (Bar)</h3>
-			<div class="chart-frame">{{ charts.product_chart | safe }}</div>
-		</article>
+					<label for="block01_metric">Ranking Metric</label>
+					<select id="block01_metric" name="block01_metric">
+						{% for metric_name in block01_metric_options or ["Count", "ValueNett"] %}
+						<option value="{{ metric_name }}" {% if block01_metric == metric_name %}selected{% endif %}>{{ metric_name }}</option>
+						{% endfor %}
+					</select>
 
-		{% if charts.share_chart %}
-		<article class="panel chart-card">
-			<h3>Debit Share by Product (Pie)</h3>
-			<div class="chart-frame">{{ charts.share_chart | safe }}</div>
-		</article>
-		{% endif %}
-
-		<article class="panel chart-card">
-			<h3>Top Merchants by Debit</h3>
-			<div class="chart-frame">{{ charts.merchant_chart | safe }}</div>
-		</article>
-
-		<article class="panel chart-card">
-			<h3>Transaction Value Scale</h3>
-			<div class="chart-frame">{{ charts.revenue_chart | safe }}</div>
-		</article>
-
-		<article class="panel chart-card">
-			<h3>Trend Over Time</h3>
-			<div class="chart-frame">{{ charts.trend_chart | safe }}</div>
-		</article>
+					<button type="submit">Apply</button>
+				</form>
+				{% if block01_rows and (block01_rows|length > 0) %}
+				<p class="b01-scroll-hint">&#8597; hover list &amp; scroll &nbsp;|&nbsp; {{ block01_rows|length }} rows</p>
+				<div class="slot-list-wrap">
+					<table class="block01-table">
+						<thead>
+							<tr>
+								<th class="col-rank">#</th>
+								<th>App Description</th>
+								<th>Product</th>
+								<th>Count</th>
+								<th>ValueNett</th>
+								<th>ValueDebit</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for row in block01_rows %}
+							<tr>
+								<td class="col-rank">{{ row.rank }}</td>
+								<td>{{ row.app_description }}</td>
+								<td>{{ row.product }}</td>
+								<td>{{ row.count|fmt_num }}</td>
+								<td>{{ row.valuenett|fmt_num }}</td>
+								<td>{{ row.valuedebit|fmt_num }}</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				{% else %}
+				<p>No rows available for Block 01 yet.</p>
+				{% endif %}
+			</article>
+			<article class="starter-slot">
+				<h3>Block 02</h3>
+				<p>Waiting for your field definition.</p>
+			</article>
+			<article class="starter-slot">
+				<h3>Block 03</h3>
+				<p>Waiting for your field definition.</p>
+			</article>
+			<article class="starter-slot">
+				<h3>Block 04</h3>
+				<p>Waiting for your field definition.</p>
+			</article>
+		</div>
 	</section>
 </div>
 
+<script src="/static/theme.js"></script>
 </body>
 </html>

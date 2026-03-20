@@ -6,3 +6,5 @@ openpyxl
 xlrd
 pyxlsb
 gunicorn
+reportlab
+flask-compress
