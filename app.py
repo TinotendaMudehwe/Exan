@@ -1210,9 +1210,7 @@ def persist_auth_settings(username, password, env_path=".env"):
 def resolve_react_login_url(req):
     if REACT_LOGIN_URL:
         return REACT_LOGIN_URL
-
-    host = req.host.split(":", 1)[0] if req.host else "127.0.0.1"
-    return f"http://{host}:3000"
+    return None
 
 
 @app.route("/healthz", methods=["GET"])
@@ -1222,9 +1220,12 @@ def healthz():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    react_login_url = resolve_react_login_url(request)
+
     if request.method == "GET":
-        # Always use the React login screen.
-        return redirect(resolve_react_login_url(request))
+        if react_login_url:
+            return redirect(react_login_url)
+        return render_template("login.html", error=None)
 
     if request.method == "POST":
 
@@ -1254,7 +1255,9 @@ def login():
             session.permanent = remember
             return redirect(url_for("index"))
 
-        return redirect(url_for("login"))
+        if react_login_url:
+            return redirect(url_for("login"))
+        return render_template("login.html", error="Invalid username or password")
 
 
 @app.route("/logout")

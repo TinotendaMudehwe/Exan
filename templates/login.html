@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Exan Login</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="page-shell">
+  <section class="panel" style="max-width: 520px; margin: 40px auto;">
+    <p class="eyebrow">Exan</p>
+    <h2>Sign In</h2>
+    <p class="subtitle">Enter your dashboard credentials.</p>
+
+    {% if error %}
+    <p class="form-alert error">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" class="stack-form" autocomplete="on">
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required>
+
+      <label class="checkbox-item" for="remember">
+        <input id="remember" type="checkbox" name="remember">
+        <span>Remember me</span>
+      </label>
+
+      <button type="submit">Login</button>
+    </form>
+  </section>
+</div>
+<script src="/static/theme.js"></script>
+</body>
+</html>
